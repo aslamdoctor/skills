@@ -136,7 +136,7 @@ Generated: {date}
 
 ### Step 4: Generate Cover Image Prompts
 
-Use the `/baoyu-cover-image` skill concepts to create prompts for 5 different styles.
+Use the `/cover-image` skill concepts to create prompts for 5 different styles.
 
 **Default styles to use** (select 5 varied styles):
 1. `elegant` - Professional, sophisticated

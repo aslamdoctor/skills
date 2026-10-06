@@ -1,5 +1,5 @@
 ---
-name: baoyu-cover-image
+name: cover-image
 description: Generate elegant cover images for articles. Analyzes content and creates eye-catching hand-drawn style cover images with multiple style options. Use when user asks to "generate cover image", "create article cover", or "make a cover for article".
 ---
 
@@ -11,25 +11,25 @@ Generate hand-drawn style cover images for articles with multiple style options.
 
 ```bash
 # From markdown file (auto-select style based on content)
-/baoyu-cover-image path/to/article.md
+/cover-image path/to/article.md
 
 # Specify a style
-/baoyu-cover-image path/to/article.md --style blueprint
-/baoyu-cover-image path/to/article.md --style warm
-/baoyu-cover-image path/to/article.md --style dark-atmospheric
+/cover-image path/to/article.md --style blueprint
+/cover-image path/to/article.md --style warm
+/cover-image path/to/article.md --style dark-atmospheric
 
 # Without title text
-/baoyu-cover-image path/to/article.md --no-title
+/cover-image path/to/article.md --no-title
 
 # Combine options
-/baoyu-cover-image path/to/article.md --style minimal --no-title
+/cover-image path/to/article.md --style minimal --no-title
 
 # From direct text input
-/baoyu-cover-image
+/cover-image
 [paste content or describe the topic]
 
 # Direct input with style
-/baoyu-cover-image --style playful
+/cover-image --style playful
 [paste content]
 ```
 
@@ -279,7 +279,7 @@ Preview the image to verify it matches your expectations.
 Custom styles and configurations via EXTEND.md.
 
 **Check paths** (priority order):
-1. `.baoyu-skills/baoyu-cover-image/EXTEND.md` (project)
-2. `~/.baoyu-skills/baoyu-cover-image/EXTEND.md` (user)
+1. `.skills/cover-image/EXTEND.md` (project)
+2. `~/.skills/cover-image/EXTEND.md` (user)
 
 If found, load before Step 1. Extension content overrides defaults.
