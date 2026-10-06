@@ -28,20 +28,22 @@ You tell your agent which issues to work on. It becomes the orchestrator: each t
 
 ## Install
 
-Clone into your agent's skills directory:
+With the [skills CLI](https://skills.sh):
 
 ```bash
-git clone https://github.com/aslamdoctor/agent-smith ~/.claude/skills/agent-smith
+npx skills add aslamdoctor/skills --skill agent-smith
 ```
 
-Other agents read skills from other directories. Symlink the same folder there:
+Or clone the [skills repo](https://github.com/aslamdoctor/skills) and symlink this folder into each agent's skills directory:
 
 ```bash
-ln -s ~/.claude/skills/agent-smith ~/.agents/skills/agent-smith   # shared location (Codex, OpenCode, Pi and others)
-ln -s ~/.claude/skills/agent-smith ~/.codex/skills/agent-smith    # Codex
+git clone https://github.com/aslamdoctor/skills ~/skills
+ln -s ~/skills/skills/agent-smith ~/.claude/skills/agent-smith   # Claude Code
+ln -s ~/skills/skills/agent-smith ~/.agents/skills/agent-smith   # shared location (Codex, OpenCode, Pi and others)
+ln -s ~/skills/skills/agent-smith ~/.codex/skills/agent-smith    # Codex
 ```
 
-For an agent without skill support, tell it: "Read ~/.claude/skills/agent-smith/SKILL.md and follow it."
+For an agent without skill support, tell it: "Read ~/skills/skills/agent-smith/SKILL.md and follow it."
 
 ## Usage
 
