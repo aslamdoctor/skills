@@ -61,6 +61,10 @@ ln -s ~/skills/skills/cover-image ~/.claude/skills/cover-image
 
 Put an `EXTEND.md` in `.skills/cover-image/` (per project) or `~/.skills/cover-image/` (for you) to add styles or change defaults. The project file wins.
 
+## Credits
+
+Adapted from [baoyu-cover-image](https://github.com/JimLiu/baoyu-skills/tree/main/skills/baoyu-cover-image) by Jim Liu ([JimLiu/baoyu-skills](https://github.com/JimLiu/baoyu-skills)).
+
 ## License
 
 MIT
