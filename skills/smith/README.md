@@ -1,11 +1,11 @@
-# Agent Smith
+# Smith
 
 An agent skill for working on several coding tasks in parallel from one [Herdr](https://herdr.dev) pane.
 
 You tell your agent which issues to work on. It becomes the orchestrator: each task gets its own git worktree, a background Herdr tab and a worker agent. Workers stop at gates (spec, implemented, PR) and report back. The orchestrator brings you their questions with a recommendation and relays your answers, so nothing is shipped or posted without your OK.
 
 ```
-/agent-smith 101 102 103
+/smith 101 102 103
 ```
 
 ## What you get
@@ -15,7 +15,7 @@ You tell your agent which issues to work on. It becomes the orchestrator: each t
 - A watcher per worker wakes the orchestrator when a gate is reached, a dialog is waiting, or a worker stops. A Herdr toast and sound tell you when you're needed.
 - Each worker pane shows its task and gate (`#102 · spec`) in the Herdr sidebar.
 - Workers can be Claude Code, Codex, Antigravity, Grok, OpenCode, Pi, Copilot, Cursor or any other agent Herdr supports. Other CLI agents work through a custom-command mode, and one run can mix agent kinds.
-- A run is saved to `~/.agent-smith/runs/`. Workers can be restarted later in their original conversation, for example to handle review comments the next day.
+- A run is saved to `~/.smith/runs/`. Workers can be restarted later in their original conversation, for example to handle review comments the next day.
 - A task that depends on another task's unmerged branch is cut from that branch and shipped as a stacked PR.
 - Base branch, branch naming, commit format, ship flow and test commands come from the repo's instruction files (AGENTS.md, CLAUDE.md and similar). You confirm them once per run.
 
@@ -31,29 +31,29 @@ You tell your agent which issues to work on. It becomes the orchestrator: each t
 With the [skills CLI](https://skills.sh):
 
 ```bash
-npx skills add aslamdoctor/skills --skill agent-smith
+npx skills add aslamdoctor/skills --skill smith
 ```
 
 Or clone the [skills repo](https://github.com/aslamdoctor/skills) and symlink this folder into each agent's skills directory:
 
 ```bash
 git clone https://github.com/aslamdoctor/skills ~/skills
-ln -s ~/skills/skills/agent-smith ~/.claude/skills/agent-smith   # Claude Code
-ln -s ~/skills/skills/agent-smith ~/.agents/skills/agent-smith   # shared location (Codex, OpenCode, Pi and others)
-ln -s ~/skills/skills/agent-smith ~/.codex/skills/agent-smith    # Codex
+ln -s ~/skills/skills/smith ~/.claude/skills/smith   # Claude Code
+ln -s ~/skills/skills/smith ~/.agents/skills/smith   # shared location (Codex, OpenCode, Pi and others)
+ln -s ~/skills/skills/smith ~/.codex/skills/smith    # Codex
 ```
 
-For an agent without skill support, tell it: "Read ~/skills/skills/agent-smith/SKILL.md and follow it."
+For an agent without skill support, tell it: "Read ~/skills/skills/smith/SKILL.md and follow it."
 
 ## Usage
 
 Start your agent in a Herdr pane inside the repo, then ask for parallel work:
 
-- `/agent-smith 101 102 103`
+- `/smith 101 102 103`
 - "Work on 101 and 102 in parallel"
 - "Pick 3 open issues that don't depend on each other and run them in parallel"
 - "Use codex workers for these issues"
-- "Resume yesterday's agent-smith run"
+- "Resume yesterday's smith run"
 
 A typical run:
 
@@ -88,7 +88,7 @@ scripts/board.sh         status table for the whole run
 scripts/agents.tsv       per-agent integration, resume arguments and transcript paths
 ```
 
-Each run keeps its state in `~/.agent-smith/runs/<repo>-<date>/`: `run.json` holds one record per task (branch, worktree, tab, pane, agent kind, session ID, gate, PR), and `gates/<id>.md` is the gate log.
+Each run keeps its state in `~/.smith/runs/<repo>-<date>/`: `run.json` holds one record per task (branch, worktree, tab, pane, agent kind, session ID, gate, PR), and `gates/<id>.md` is the gate log.
 
 ## Notes
 

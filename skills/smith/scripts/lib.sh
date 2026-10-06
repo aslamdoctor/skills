@@ -2,7 +2,7 @@
 # Shared helpers. Source it: . "$(dirname "$0")/lib.sh"
 # Every script needs RUN=<run dir> (holds run.json and gates/<id>.md).
 
-: "${RUN:?set RUN to the run directory, e.g. ~/.agent-smith/runs/<repo>-<date>}"
+: "${RUN:?set RUN to the run directory, e.g. ~/.smith/runs/<repo>-<date>}"
 LIB_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 mkdir -p "$RUN/gates"
 [ -f "$RUN/run.json" ] || echo '{"tasks":{}}' >"$RUN/run.json"

@@ -1,9 +1,9 @@
 ---
-name: agent-smith
-description: Orchestrate several coding tasks in parallel from one Herdr pane, with any coding agent (Claude Code, Codex, Antigravity, Grok, OpenCode, Pi, Copilot, Cursor and the rest Herdr supports, or any other CLI agent). Each task gets its own git worktree, a background Herdr tab and a worker agent. Workers can be different kinds in one run. They stop at gates (spec, implemented, pr), show their gate in the Herdr sidebar and report back to this orchestrator session, which relays the user's decisions. A run is saved to disk, so workers can be resumed with their full conversation later. Works on any git project. Use when the user wants to work on multiple issues or tasks at once, e.g. "work on 101 and 102 in parallel", "spin up workers for these issues", "agent-smith 101 102 103", "/agent-smith", "use codex workers", "pick N issues and run them in parallel", or "resume yesterday's agent-smith run". Requires Herdr (HERDR_ENV=1).
+name: smith
+description: Orchestrate several coding tasks in parallel from one Herdr pane, with any coding agent (Claude Code, Codex, Antigravity, Grok, OpenCode, Pi, Copilot, Cursor and the rest Herdr supports, or any other CLI agent). Each task gets its own git worktree, a background Herdr tab and a worker agent. Workers can be different kinds in one run. They stop at gates (spec, implemented, pr), show their gate in the Herdr sidebar and report back to this orchestrator session, which relays the user's decisions. A run is saved to disk, so workers can be resumed with their full conversation later. Works on any git project. Use when the user wants to work on multiple issues or tasks at once, e.g. "work on 101 and 102 in parallel", "spin up workers for these issues", "smith 101 102 103", "/smith", "use codex workers", "pick N issues and run them in parallel", or "resume yesterday's smith run". Requires Herdr (HERDR_ENV=1).
 ---
 
-# Agent Smith
+# Smith
 
 This session is the orchestrator. It never writes task code itself. It creates workers, sends them prompts, watches them, and brings their questions to the user. Workers do the work in their own worktree and tab.
 
@@ -24,10 +24,10 @@ The orchestrator works the same way. Its wake-up mode depends on its own kind (s
 
 ## 0. Preflight
 
-1. Check `test "${HERDR_ENV:-}" = 1`. If it fails, say Agent Smith needs to run inside a Herdr pane and stop. Load the `herdr` skill if one is available.
+1. Check `test "${HERDR_ENV:-}" = 1`. If it fails, say Smith needs to run inside a Herdr pane and stop. Load the `herdr` skill if one is available.
 2. Find your own kind: `herdr agent get "$HERDR_PANE_ID" | jq -r .result.agent.agent`. This picks the watch mode in section 3.
 3. Pick the worker kind (or kinds) with the user. The default is your own kind. For each kind, check `herdr integration status`, and offer `herdr integration install <integration>` (the integration name is in `agents.tsv`) if it isn't `current`.
-4. Choose the run directory: `RUN=~/.agent-smith/runs/<repo>-<YYYY-MM-DD>`. Reuse it if it exists for today. It holds `run.json` (one record per task) and `gates/<id>.md` (the gate log).
+4. Choose the run directory: `RUN=~/.smith/runs/<repo>-<YYYY-MM-DD>`. Reuse it if it exists for today. It holds `run.json` (one record per task) and `gates/<id>.md` (the gate log).
 5. If a project or global rule forbids worktrees, tell the user this skill needs them and ask once. Record a scoped exception in your memory or notes if they agree.
 
 ## 1. Pick the tasks and the setup
@@ -89,7 +89,7 @@ After every prompt that starts work, arm one watcher per worker. Choose the mode
   ```bash
   nohup env RUN=<run> S/watch.sh <id> --notify "$HERDR_PANE_ID" >/dev/null 2>&1 &
   ```
-  The report arrives as a new message starting `[agent-smith]`. If you're showing the user a dialog at the time, the watcher waits for it to close rather than typing into it.
+  The report arrives as a new message starting `[smith]`. If you're showing the user a dialog at the time, the watcher waits for it to close rather than typing into it.
 
 The watcher reports one of four things:
 - **GATE:** a new gate line.
@@ -127,9 +127,9 @@ Ship stacked tasks as stacked PRs (see **Stacked ship** in the templates). After
 
 ## 7. Resume a run
 
-For review feedback, a follow-up or a session that lost track of a run ("resume yesterday's agent-smith run"):
+For review feedback, a follow-up or a session that lost track of a run ("resume yesterday's smith run"):
 
-1. Find the run with `ls -t ~/.agent-smith/runs/` and read its `run.json`. Show `RUN=<run> S/board.sh`.
+1. Find the run with `ls -t ~/.smith/runs/` and read its `run.json`. Show `RUN=<run> S/board.sh`.
 2. For each task to resume, start the worker in its old conversation, with the kind recorded for it:
    ```bash
    RUN=<run> S/spawn.sh <id> <branch> <base> --kind <kind> --resume <session>
@@ -150,8 +150,8 @@ For review feedback, a follow-up or a session that lost track of a run ("resume 
 The skill is a plain folder in the Agent Skills format. Symlink it into each agent's skills directory so it updates in one place:
 
 ```bash
-ln -s ~/.claude/skills/agent-smith ~/.agents/skills/agent-smith   # shared dir (Codex, OpenCode, Pi and others read it)
-ln -s ~/.claude/skills/agent-smith ~/.codex/skills/agent-smith    # Codex
+ln -s ~/.claude/skills/smith ~/.agents/skills/smith   # shared dir (Codex, OpenCode, Pi and others read it)
+ln -s ~/.claude/skills/smith ~/.codex/skills/smith    # Codex
 ```
 
-For an agent without skill support, point it at this file: "Read ~/.claude/skills/agent-smith/SKILL.md and follow it."
+For an agent without skill support, point it at this file: "Read ~/.claude/skills/smith/SKILL.md and follow it."

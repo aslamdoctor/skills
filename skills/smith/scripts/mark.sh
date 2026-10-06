@@ -23,7 +23,7 @@ pane=$(task_field "$id" pane)
 if [ -n "$pane" ]; then
 	label="#$id $gate"
 	[ "$gate" = question ] && label="#$id needs answer"
-	herdr pane report-metadata "$pane" --source agent-smith --title "#$id · $gate" \
+	herdr pane report-metadata "$pane" --source smith --title "#$id · $gate" \
 		--state-label "idle=$label" --state-label "done=$label" --state-label "blocked=#$id blocked" \
 		--state-label "working=#$id working" --token "gate=$gate" >/dev/null 2>&1 || true
 fi

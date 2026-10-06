@@ -6,7 +6,7 @@ Agent skills I use day to day. Each one is a folder with a `SKILL.md`, in the [A
 
 | Skill | What it does |
 |---|---|
-| [agent‑smith](skills/agent-smith) | Runs several coding tasks in parallel from one Herdr pane, each in its own worktree with its own worker agent |
+| [smith](skills/smith) | Runs several coding tasks in parallel from one Herdr pane, each in its own worktree with its own worker agent |
 | [content‑writer](skills/content-writer) | Builds a full content package for a topic: social posts, a blog post and cover image prompts. Uses the three skills below |
 | [content‑creator](skills/content-creator) | SEO blog content with brand voice analysis, plus Python scripts for voice and SEO scoring |
 | [social‑content](skills/social-content) | Platform-specific posts for LinkedIn, X, Instagram, TikTok and Facebook |
@@ -17,7 +17,7 @@ Agent skills I use day to day. Each one is a folder with a `SKILL.md`, in the [A
 With the [skills CLI](https://skills.sh):
 
 ```bash
-npx skills add aslamdoctor/skills --skill agent-smith
+npx skills add aslamdoctor/skills --skill smith
 ```
 
 content-writer needs its three helper skills installed too:
@@ -30,7 +30,7 @@ Or clone the repo and symlink the skills you want into your agent's skills direc
 
 ```bash
 git clone https://github.com/aslamdoctor/skills ~/skills
-ln -s ~/skills/skills/agent-smith ~/.claude/skills/agent-smith
+ln -s ~/skills/skills/smith ~/.claude/skills/smith
 ```
 
 ## License

@@ -49,10 +49,10 @@ report() {
 	line=$(tail -1 "$log" 2>/dev/null || echo 'no gate line yet')
 	if [ "$kind" = custom ]; then state=$(pane_alive "$pane" && echo alive || echo gone); else state=$(agent_state "$agent"); fi
 	local sound=request; [ "$what" = GATE ] && [[ $line == "GATE pr |"* ]] && sound=done
-	herdr notification show "Agent Smith: #$id $what" --body "${line:0:180}" --sound "$sound" >/dev/null 2>&1 || true
+	herdr notification show "Smith: #$id $what" --body "${line:0:180}" --sound "$sound" >/dev/null 2>&1 || true
 	local msg="$what i$id ($state)"$'\n'"STATUS: $line"
 	if [ -n "$notify" ]; then
-		deliver "[agent-smith] $what for task #$id ($state). $line. RUN=$RUN. Handle it as in agent-smith section 4, then re-arm this task's watcher."
+		deliver "[smith] $what for task #$id ($state). $line. RUN=$RUN. Handle it as in smith section 4, then re-arm this task's watcher."
 	else
 		echo "$msg"
 	fi

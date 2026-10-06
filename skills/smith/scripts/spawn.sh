@@ -73,7 +73,7 @@ else
 	[ -z "$session" ] && session=$resume
 fi
 
-herdr pane report-metadata "$pane" --source agent-smith --title "#$id" \
+herdr pane report-metadata "$pane" --source smith --title "#$id" \
 	--state-label "working=#$id working" --token "gate=started" >/dev/null 2>&1 || true
 
 run_update '.tasks[$id] = ((.tasks[$id] // {}) + {id:$id, agent:$agent, kind:$kind, cmd:$cmd, branch:$branch, base:$base, worktree:$wt, tab:$tab, pane:$pane, session:$session, updated:$now}) | .tasks[$id].gate //= "started"' \
