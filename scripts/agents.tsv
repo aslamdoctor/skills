@@ -1,0 +1,25 @@
+# kind	integration	resume_args ({id} = session id; - = no resume)	transcript (glob, {id} = session id; - = unknown)
+claude	claude	--resume {id}	~/.claude/projects/*/{id}.jsonl
+codex	codex	resume {id}	~/.codex/sessions/**/*{id}*.jsonl
+agy	antigravity-cli	--conversation {id}	-
+grok	grok	--resume {id}	-
+pi	pi	--session {id}	~/.pi/agent/sessions/**/*{id}*
+opencode	opencode	--session {id}	-
+copilot	copilot	--resume={id}	-
+cursor	cursor	--resume {id}	-
+devin	devin	--resume {id}	-
+droid	droid	--resume {id}	-
+kimi	kimi	--session {id}	-
+qodercli	qodercli	--resume {id}	-
+qwen	qwen	--resume {id}	-
+letta	letta	--conversation {id}	-
+hermes	hermes	--resume {id}	-
+mastracode	mastracode	--thread {id}	-
+kilo	kilo	--session {id}	-
+omp	omp	--resume={id}	-
+gemini	-	-	-
+cline	-	-	-
+amp	-	-	-
+kiro	-	-	-
+maki	-	-	-
+muse	-	-	-
