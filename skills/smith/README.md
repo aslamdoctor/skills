@@ -13,7 +13,7 @@ You tell your agent which issues to work on. It becomes the orchestrator: each t
 - Each task runs on its own branch in `~/<repo>-wt/<branch>`, so workers never touch each other's files or your main checkout.
 - Workers write a spec and stop. After you approve it, they implement, commit and stop again. They ship only when you say so.
 - A watcher per worker wakes the orchestrator when a gate is reached, a dialog is waiting, or a worker stops. A Herdr toast and sound tell you when you're needed.
-- Each worker pane shows its task and gate (`#102 · spec`) in the Herdr sidebar.
+- Workers are Smith's copies, named after their task. Each worker pane shows its name and gate (`Smith-102 · spec`) in the Herdr sidebar.
 - Workers can be Claude Code, Codex, Antigravity, Grok, OpenCode, Pi, Copilot, Cursor or any other agent Herdr supports. Other CLI agents work through a custom-command mode, and one run can mix agent kinds.
 - A run is saved to `~/.smith/runs/`. Workers can be restarted later in their original conversation, for example to handle review comments the next day.
 - A task that depends on another task's unmerged branch is cut from that branch and shipped as a stacked PR.

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Create (or reuse) a worktree for one task, open a background Herdr tab in it and start a worker agent.
 # Usage: RUN=<run dir> spawn.sh <id> <branch> <base-ref> [--kind <kind>] [--resume <session-id>] [--cmd "<launch command>"]
-#   id         issue number or short slug; the worker is named i<id>
+#   id         issue number or short slug; the worker is Smith-<id> (Herdr agent smith-<id>)
 #   branch     branch to create (reused if it already exists locally)
 #   base-ref   ref to cut a new branch from: origin/<base> or origin/<parent-branch> for stacked work
 #   --kind     any Herdr agent kind (see agents.tsv); default $AGENT_KIND or claude
@@ -27,7 +27,7 @@ done
 repo_root=$(git rev-parse --show-toplevel)
 root=${WT_ROOT:-"$HOME/$(basename "$repo_root")-wt"}
 wt="$root/$branch"
-agent="i$id"
+agent=$(new_agent_name "$id"); label=$(worker_label "$id")
 
 mkdir -p "$root"
 if [ ! -d "$wt" ]; then
@@ -41,7 +41,7 @@ if [ ! -d "$wt" ]; then
 	fi
 fi
 
-tab_json=$(herdr tab create --workspace "$HERDR_WORKSPACE_ID" --cwd "$wt" --label "#$id" --no-focus)
+tab_json=$(herdr tab create --workspace "$HERDR_WORKSPACE_ID" --cwd "$wt" --label "$label" --no-focus)
 tab=$(jq -r '.result.tab.tab_id' <<<"$tab_json")
 pane=$(jq -r '.result.root_pane.pane_id' <<<"$tab_json")
 session=""
@@ -73,8 +73,8 @@ else
 	[ -z "$session" ] && session=$resume
 fi
 
-herdr pane report-metadata "$pane" --source smith --title "#$id" \
-	--state-label "working=#$id working" --token "gate=started" >/dev/null 2>&1 || true
+herdr pane report-metadata "$pane" --source smith --title "$label" \
+	--state-label "working=$label working" --token "gate=started" >/dev/null 2>&1 || true
 
 run_update '.tasks[$id] = ((.tasks[$id] // {}) + {id:$id, agent:$agent, kind:$kind, cmd:$cmd, branch:$branch, base:$base, worktree:$wt, tab:$tab, pane:$pane, session:$session, updated:$now}) | .tasks[$id].gate //= "started"' \
 	--arg id "$id" --arg agent "$agent" --arg kind "$kind" --arg cmd "$cmd" --arg branch "$branch" --arg base "$base" \

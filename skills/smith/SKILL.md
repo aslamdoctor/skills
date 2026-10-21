@@ -7,6 +7,8 @@ description: Orchestrate several coding tasks in parallel from one Herdr pane, w
 
 This session is the orchestrator. It never writes task code itself. It creates workers, sends them prompts, watches them, and brings their questions to the user. Workers do the work in their own worktree and tab.
 
+Workers are Smith's copies, named after their task: the worker for task 101 is `Smith-101` in the sidebar, toasts and reports, and `smith-101` as its Herdr agent name (Herdr only allows lowercase names). Scripts read the name from `run.json`, so older runs with `i<id>` workers keep working.
+
 `S` below means this skill's `scripts/` directory. Every script needs the `RUN` env var. Prompt templates are in `references/prompts.md`. Read `references/gotchas.md` before the first run in a session.
 
 ## Agent support
@@ -64,9 +66,9 @@ RUN=<run> S/spawn.sh <id> <branch> <base-ref> --cmd "<launch command>"   # tier 
 
 spawn.sh:
 - creates or reuses the worktree
-- opens a background tab and starts the worker `i<id>`
+- opens a background tab and starts the worker `smith-<id>`
 - records the task in `run.json` (kind, pane, tab, session ID if one is reported)
-- labels the pane `#<id>` in the sidebar
+- labels the tab and pane `Smith-<id>` in the sidebar
 - prints the task record
 
 If the status isn't `idle`, read the screen. New worktree paths often bring up a first-run dialog (folder trust, login, model picker). Bring it to the user before answering it.
@@ -102,7 +104,7 @@ It also shows a Herdr toast with a sound. A worker that goes idle while its own 
 
 ## 4. When a watcher reports
 
-1. Read the worker's screen: `herdr agent read i<id> --source recent-unwrapped --lines 50`, or `herdr pane read <pane> ...` for tier D. If the reply isn't there (it was drawn on the alternate screen), use the transcript path for that kind in `agents.tsv`. Otherwise, ask the worker to write its answer to a file and read the file.
+1. Read the worker's screen: `herdr agent read <agent> --source recent-unwrapped --lines 50`, or `herdr pane read <pane> ...` for tier D. If the reply isn't there (it was drawn on the alternate screen), use the transcript path for that kind in `agents.tsv`. Otherwise, ask the worker to write its answer to a file and read the file.
 2. Report to the user based on what fired:
    - **GATE spec:** the approach in a few lines, deviations from the task, and the worker's open questions as a table with *your* recommendation for each. Point out conflicts with sibling workers (same method, same docs section).
    - **GATE implemented:** the commit hash, message and changed files (in the user's commit-report format if they have one), test and lint results, anything the worker changed from the approved spec, and new shared-environment problems.

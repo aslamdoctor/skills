@@ -11,7 +11,7 @@ echo "GATE $gate | $text | $ref" >>"$RUN/gates/$id.md"
 
 pr=""
 [[ $ref == *"/pull/"* ]] && pr=$ref
-session=$(agent_session "i$id")
+session=$(agent_session "$(worker_agent "$id")")
 
 run_update '.tasks[$id] = ((.tasks[$id] // {id:$id}) + {gate:$gate, gate_text:$text, ref:$ref, updated:$now})
 	| if $pr != "" then .tasks[$id].pr = $pr else . end
@@ -21,10 +21,11 @@ run_update '.tasks[$id] = ((.tasks[$id] // {id:$id}) + {gate:$gate, gate_text:$t
 
 pane=$(task_field "$id" pane)
 if [ -n "$pane" ]; then
-	label="#$id $gate"
-	[ "$gate" = question ] && label="#$id needs answer"
-	herdr pane report-metadata "$pane" --source smith --title "#$id · $gate" \
-		--state-label "idle=$label" --state-label "done=$label" --state-label "blocked=#$id blocked" \
-		--state-label "working=#$id working" --token "gate=$gate" >/dev/null 2>&1 || true
+	name=$(worker_label "$id")
+	label="$name $gate"
+	[ "$gate" = question ] && label="$name needs answer"
+	herdr pane report-metadata "$pane" --source smith --title "$name · $gate" \
+		--state-label "idle=$label" --state-label "done=$label" --state-label "blocked=$name blocked" \
+		--state-label "working=$name working" --token "gate=$gate" >/dev/null 2>&1 || true
 fi
-echo "marked #$id: $gate"
+echo "marked $(worker_label "$id"): $gate"

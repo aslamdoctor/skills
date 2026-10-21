@@ -22,6 +22,13 @@ run_update() {
 
 task_field() { jq -r --arg id "$1" ".tasks[\$id].$2 // empty" "$RUN/run.json"; }
 
+# Workers are Smith's copies, named after their task. Herdr agent names must be lowercase
+# (a-z, 0-9, '-', '_', max 32), so smith-<id> is the address and Smith-<id> is what people see.
+new_agent_name() { local n; n=$(printf 'smith-%s' "$1" | tr 'A-Z' 'a-z' | tr -c 'a-z0-9_-' '-'); echo "${n:0:32}"; }
+worker_label() { echo "Smith-$1"; }
+# The address recorded in run.json, so runs from before the rename (i<id>) keep working.
+worker_agent() { local a; a=$(task_field "$1" agent); echo "${a:-$(new_agent_name "$1")}"; }
+
 # Column of agents.tsv for a kind: agent_info <kind> <integration|resume|transcript>. Prints "-" if unknown.
 agent_info() {
 	local col

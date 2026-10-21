@@ -25,7 +25,7 @@ while [ $# -gt 0 ]; do
 	esac
 done
 grace_ms=$((grace_min * 60000))
-agent="i$id"; log="$RUN/gates/$id.md"
+agent=$(worker_agent "$id"); name=$(worker_label "$id"); log="$RUN/gates/$id.md"
 kind=$(task_field "$id" kind); pane=$(task_field "$id" pane)
 
 count_lines() { if [ -f "$log" ]; then wc -l <"$log" | tr -d ' '; else echo 0; fi; }
@@ -49,10 +49,10 @@ report() {
 	line=$(tail -1 "$log" 2>/dev/null || echo 'no gate line yet')
 	if [ "$kind" = custom ]; then state=$(pane_alive "$pane" && echo alive || echo gone); else state=$(agent_state "$agent"); fi
 	local sound=request; [ "$what" = GATE ] && [[ $line == "GATE pr |"* ]] && sound=done
-	herdr notification show "Smith: #$id $what" --body "${line:0:180}" --sound "$sound" >/dev/null 2>&1 || true
-	local msg="$what i$id ($state)"$'\n'"STATUS: $line"
+	herdr notification show "$name: $what" --body "${line:0:180}" --sound "$sound" >/dev/null 2>&1 || true
+	local msg="$what $name, agent $agent ($state)"$'\n'"STATUS: $line"
 	if [ -n "$notify" ]; then
-		deliver "[smith] $what for task #$id ($state). $line. RUN=$RUN. Handle it as in smith section 4, then re-arm this task's watcher."
+		deliver "[smith] $what for $name, task #$id, agent $agent ($state). $line. RUN=$RUN. Handle it as in smith section 4, then re-arm this task's watcher."
 	else
 		echo "$msg"
 	fi

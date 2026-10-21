@@ -10,7 +10,7 @@ set -uo pipefail
 
 id=$1
 if [ $# -ge 2 ]; then msg=$2; else msg=$(cat); fi
-agent="i$id"; kind=$(task_field "$id" kind); pane=$(task_field "$id" pane)
+agent=$(worker_agent "$id"); kind=$(task_field "$id" kind); pane=$(task_field "$id" pane)
 
 # Baseline for watch.sh: a gate the worker marks before its watcher starts still counts as new.
 log="$RUN/gates/$id.md"
