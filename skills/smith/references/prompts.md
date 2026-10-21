@@ -15,7 +15,7 @@ Work in gates. At each gate, run this command, then STOP and wait for my next me
 RUN=<run> <skill-scripts>/mark.sh <id> <gate> "<one-sentence status>" "<path, commit or PR URL>"
 It updates the run record and the Herdr sidebar label. Ask questions in plain text; don't open interactive question dialogs. If you need a decision, mark gate 'question' with the question as the status, and stop.
 GATE spec: <tracker bookkeeping, e.g. assign the issue to me and set it to In Progress>. Then write a short spec plus an implementation plan (files, classes or functions, signatures, risks, open questions) into <docs path>. Don't write code yet.
-GATE implemented: after I approve the spec, implement it. <test policy>. Run <lint / type check commands> on the changed files, then commit following the repo's commit format.
+GATE implemented: after I approve the spec, implement it. <test policy>. Run <lint / type check commands> on the changed files, then commit following the repo's commit format. Then run <pre-ship review> on the branch diff (skip this if none), fix nothing yet, and put its findings table in your gate message.
 GATE pr: after I say ship, run <ship skill or steps> with base <pr-base>.
 ```
 
@@ -24,13 +24,13 @@ GATE pr: after I say ship, run <ship skill or steps> with base <pr-base>.
 ## Spec approval
 
 ```
-Spec approved by <user>. Answers: 1) <...> 2) <...> 3) <...>. Then implement it and stop at GATE implemented (<lint>, the tests the task asks for, commit, mark.sh implemented with the commit hash). Don't push.
+Spec approved by <user>. Answers: 1) <...> 2) <...> 3) <...>. Then implement it and stop at GATE implemented (<lint>, the tests the task asks for, commit, <pre-ship review> findings, mark.sh implemented with the commit hash). Don't push.
 ```
 
 ## Ship
 
 ```
-Ship approved by <user>. Fetch origin and rebase on origin/<pr-base> if it has moved. Run <ship skill> with base <pr-base> and push. Keep borrowed env files and symlinks out of every commit. Answers for the skill: <pre-answered questions, e.g. automated local QA: No (local site points at the main checkout); staging: skip; reviewer: <name>>. For review-bot findings: verify them, then stop and report them in plain text. Do the same for any thread replies, which <user> approves before you post. At the end, mark gate pr with the final status and the PR URL.
+Ship approved by <user>. Fetch origin and rebase on origin/<pr-base> if it has moved. Run <ship skill> with base <pr-base> and push. Keep borrowed env files and symlinks out of every commit. Answers for the skill: <pre-answered questions, e.g. preflight: already ran at GATE implemented, skip it unless you committed since (then rerun it and report findings before pushing); automated local QA: No (local site points at the main checkout); staging: skip; reviewer: <name>>. For review-bot findings: verify them, then stop and report them in plain text. Do the same for any thread replies, which <user> approves before you post. At the end, mark gate pr with the final status and the PR URL.
 ```
 
 **Stacked ship**, when the base is another unmerged task branch: set the PR base to the parent branch, add "Stacked on PR <n>. Retarget to <pr-base> after it merges." under the implementation notes, and link the issue to the PR directly (closing keywords don't link on a non-default base).

@@ -43,6 +43,7 @@ The orchestrator works the same way. Its wake-up mode depends on its own kind (s
 | Branch name format | Branch-creation rules, recent branch names |
 | Commit format | Commit workflow rules |
 | Ship flow | A ship skill, or the project's PR rules |
+| Pre-ship review | A self-review or preflight skill, if the project has one (else none) |
 | Test and lint commands | Instruction files, package.json / composer.json / Makefile |
 | Worker kind per task | Default: your own kind |
 | Worktree root | Default `~/<repo>-wt/<branch>` (override with `WT_ROOT`) |
