@@ -19,14 +19,14 @@ The orchestrator itself can be any agent. Its wake-up mode is in § Watch.
 
 ## Preflight
 
-1. Check `test -n "${ORCA_TERMINAL_HANDLE:-}"` and `orca status --json | jq -e '.result.ok // .ok'`. If either fails, say Smith needs to run inside an Orca terminal and stop. If a command reports Orca isn't running, run `orca open --json` and retry once.
+1. Check `test -n "${ORCA_TERMINAL_HANDLE:-}"` and `orca status --json | jq -e .ok`. If either fails, say Smith needs to run inside an Orca terminal and stop. If a command reports Orca isn't running, run `orca open --json` and retry once.
 2. Load the orchestration guide once per session: `orca skills get orchestration`. Its worker contract and recovery notes apply on top of this file.
 3. Your own kind is whatever agent you are. Orca has no lookup for it; it only picks the watch mode in § Watch.
 4. Worker kinds: `claude` unless the user asks for another kind (see § Agent support).
 5. Choose the run directory: `RUN=~/.smith/runs/<repo>-<YYYY-MM-DD>`. Reuse it if it exists for today and its `run.json` says `"backend": "orca"`. It holds `run.json` (one record per task) and `gates/<id>.md` (the gate log you keep from the inbox).
 6. Create the Orca Run, or rebind to the one in `run.json`:
    ```bash
-   orca orchestration run-create --objective "smith <repo> <YYYY-MM-DD>: <ids>" --json   # new run: note .result.run.id (or the id field it prints)
+   orca orchestration run-create --objective "smith <repo> <YYYY-MM-DD>: <ids>" --json   # new run: the id is .result.run.id
    orca orchestration run-use --id <orca_run_id> --json                                  # existing run
    ```
    Write the run-level fields once:
@@ -46,11 +46,11 @@ Two steps, because `worker-start` can't name the branch and `worktree create` ca
    ```
    Stacked task (B builds on A): use `--base-branch <parent branch> --parent-worktree id:<parent worktree id>` instead of `--no-parent`.
 
-   Take the worktree id (`<repo-id>::<path>`) and path from the result. Then check the branch, because Orca adds a numeric suffix when the name is taken:
+   Take the worktree id (`<repo-id>::<path>`) from `.result.worktree.id` and the path from `.result.worktree.path` (the path can get a numeric suffix too, so don't build it yourself). Then check the branch:
    ```bash
    test "$(git -C <worktree path> branch --show-current)" = "<branch>"
    ```
-   If it differs, stop and tell the user which branch Orca created. Don't spawn on it.
+   If it differs, stop and tell the user which branch Orca created. Don't spawn on it. Orca adds a numeric suffix (`<branch>-2`) when the branch is checked out in another worktree, or when it already exists with commits of its own; it only attaches an existing branch that still points at the base. To continue an existing task branch, use its existing worktree (§ Resume) instead of creating a new one.
 
    Set the display name: `orca worktree set --worktree id:<worktree id> --display-name "Smith-<id>" --json`.
 
@@ -59,7 +59,7 @@ Two steps, because `worker-start` can't name the branch and `worktree create` ca
    orca orchestration worker-start --worktree id:<worktree id> --agent claude \
      --task-title "Smith-<id>" --spec "$(cat "$RUN/kickoff-<id>.md")" --json
    ```
-   Write the kickoff to `$RUN/kickoff-<id>.md` first so the quoting survives. `state: ready` and `turnStart: observed` mean it landed. Note `taskId`, `dispatchId` and the agent terminal handle from the result.
+   Write the kickoff to `$RUN/kickoff-<id>.md` first so the quoting survives. `.result.state: ready` and `.result.turnStart: observed` mean it landed. Take `.result.taskId`, `.result.dispatchId` and the agent terminal handle (`.result.effects[] | select(.kind == "terminal" and .role == "agent") | .id`).
 
    A non-zero exit means it failed. Read `failedStage` and `residualResources` from the output, load Orca's recovery reference (`orca skills get orchestration --reference references/recovery-and-cleanup.md`) and follow it. Never relaunch blindly.
 
@@ -75,7 +75,7 @@ Two steps, because `worker-start` can't name the branch and `worktree create` ca
    ```
    Update `gate`, `gate_text`, `pr`, `session`, `dispatch_id` and `updated` the same way as the task moves.
 
-First-run dialogs (folder trust, login) in a new worktree: if § Board shows `attention` with input and the inbox has no question for that worker, read its screen (§ Read a worker) and bring the dialog to the user before answering it.
+First-run dialogs (folder trust, login) in a new worktree: none appeared for a Claude worker in the verification run, but other setups may differ. If § Board shows `attention` with input and the inbox has no question for that worker, read its screen (§ Read a worker) and bring the dialog to the user before answering it.
 
 ## Watch
 
@@ -133,7 +133,7 @@ orca orchestration worker-read --dispatch <dispatchId> --limit 60 --json | jq '.
 
 Use it when the question text isn't enough for the gate report. For a dialog or a stuck screen, read the terminal: `orca terminal read --terminal <handle> --screen --json`.
 
-Once a worker has reached its first gate, record its agent session id in `run.json` (`session`) so § Resume doesn't depend on the search index. `orca search "Smith-<id>" --path <worktree path> --json` returns it inside `resumeCommand`.
+Once a worker has reached its first gate, record its agent session id in `run.json` (`session`) so § Resume doesn't depend on the search index. `orca search "Smith-<id>" --path <worktree path> --json | jq -r '.result.hits[0].sessionId'` returns it (the full command is in `.result.hits[0].resumeCommand`).
 
 ## Relay answers
 
@@ -168,8 +168,8 @@ Show it as a table in every report.
 ## Wrap up
 
 - After each `worker_done`, retain the worker by default so review fixes reuse the same agent and its memory: `orca orchestration worker-retain --dispatch <dispatchId> --json`.
-- Release a worker only when its PR has merged or the user says so: `orca orchestration worker-release --dispatch <dispatchId> --json`. To see what the run still owns: `orca orchestration worker-list --run <orca_run_id> --terminal-state reclaimable --json`.
-- Remove a worktree only after you've confirmed its PR merged, and only with the user's agreement. **`orca worktree rm` also deletes the branch:**
+- Release a worker only when its PR has merged or the user says so: `orca orchestration worker-release --dispatch <dispatchId> --json`. Release the task's latest dispatch: a follow-up Dispatch takes over the terminal, so releasing an earlier one reports `retained` with reason `ownership_transferred` and does nothing. A terminal you opened yourself with `terminal create` (the resume route) is external to Orca's accounting: release reports `external_terminal` and leaves it open, so close it with `orca terminal close --terminal <handle> --json`. To see what the run still owns: `orca orchestration worker-list --run <orca_run_id> --terminal-state reclaimable --json`.
+- Remove a worktree only after you've confirmed its PR merged, and only with the user's agreement. **`orca worktree rm` also tries to delete the branch.** It keeps branches that existed before the worktree and branches it can't prove are merged, so check `git branch --list <branch>` afterwards and offer to delete what's left:
   ```bash
   orca worktree rm --worktree id:<worktree id> --force --json
   ```
@@ -184,9 +184,9 @@ Show it as a table in every report.
      orca orchestration worker-start --terminal <handle> --worktree id:<worktree id> \
        --task-title "Smith-<id> fixes" --spec "$(cat "$RUN/followup-<id>.md")" --json
      ```
-   - **Its terminal is gone** (Orca restarted, terminal closed): take `session` from `run.json`, or find it with `orca search "Smith-<id>" --path <worktree path> --json` and read `resumeCommand` (e.g. `claude --resume <session id>`). Open a terminal with it and supervise that terminal (unverified):
+   - **Its terminal is gone** (Orca restarted, terminal closed): take `session` from `run.json`, or find it with `orca search "Smith-<id>" --path <worktree path> --json` (`.result.hits[0].sessionId`). Open a terminal that resumes it, then supervise that terminal (verified with Claude: the worker kept its memory of earlier dispatches). The new handle is `.result.terminal.handle`:
      ```bash
-     orca terminal create --worktree id:<worktree id> --title "Smith-<id>" --command "<resumeCommand>" --json
+     orca terminal create --worktree id:<worktree id> --title "Smith-<id>" --command "claude --resume <session id>" --json
      orca orchestration worker-start --terminal <new handle> --worktree id:<worktree id> \
        --task-title "Smith-<id> fixes" --spec "$(cat "$RUN/followup-<id>.md")" --json
      ```
