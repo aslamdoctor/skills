@@ -20,7 +20,7 @@ The orchestrator works the same way. Its wake-up mode depends on its own kind (s
 1. Check `test "${HERDR_ENV:-}" = 1`. If it fails, say Smith needs to run inside a Herdr pane and stop. Load the `herdr` skill if one is available.
 2. Find your own kind: `herdr agent get "$HERDR_PANE_ID" | jq -r .result.agent.agent`. This picks the watch mode in § Watch.
 3. Pick the worker kind (or kinds) with the user. The default is your own kind. For each kind, check `herdr integration status`, and offer `herdr integration install <integration>` (the integration name is in `agents.tsv`) if it isn't `current`.
-4. Choose the run directory: `RUN=~/.smith/runs/<repo>-<YYYY-MM-DD>`. Reuse it if it exists for today. It holds `run.json` (one record per task) and `gates/<id>.md` (the gate log).
+4. Choose the run directory: `RUN=~/.smith/runs/<repo>-<YYYY-MM-DD>`. Reuse it if it exists for today, unless its `run.json` says `"backend": "orca"`: then use `~/.smith/runs/<repo>-<YYYY-MM-DD>-herdr` instead. It holds `run.json` (one record per task) and `gates/<id>.md` (the gate log).
 
 ## Spawn
 

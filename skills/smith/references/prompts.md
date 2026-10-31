@@ -45,7 +45,7 @@ Spec approved by <user>. Answers: 1) <...> 2) <...> 3) <...>. Then implement it 
 Ship approved by <user>. Fetch origin and rebase on origin/<pr-base> if it has moved. Run <ship skill> with base <pr-base> and push. Keep borrowed env files and symlinks out of every commit. Answers for the skill: <pre-answered questions, e.g. preflight: already ran at GATE implemented, skip it unless you committed since (then rerun it and report findings before pushing); automated local QA: No (local site points at the main checkout); staging: skip; reviewer: <name>>. For review-bot findings: verify them, then stop and report them in plain text. Do the same for any thread replies, which <user> approves before you post. At the end, <herdr: mark gate pr with the final status and the PR URL | orca: send worker_done with the PR URL>.
 ```
 
-On orca, add to the Ship message: "Pushing and opening the PR are approved by <user> with this message, which overrides your preamble's no-posting line for these two actions only. Thread replies and comments still need <user>'s approval through ask."
+On orca, add to the Ship message: "Pushing and opening the PR are approved by <user> with this message, which overrides your preamble's no-posting line for these two actions only. Report review-bot findings and draft thread replies through ask (gate word: question) and wait; never stop without asking. Thread replies and comments still need <user>'s approval through ask."
 
 **Stacked ship**, when the base is another unmerged task branch: set the PR base to the parent branch, add "Stacked on PR <n>. Retarget to <pr-base> after it merges." under the implementation notes, and link the issue to the PR directly (closing keywords don't link on a non-default base).
 

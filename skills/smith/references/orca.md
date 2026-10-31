@@ -23,7 +23,7 @@ The orchestrator itself can be any agent. Its wake-up mode is in § Watch.
 2. Load the orchestration guide once per session: `orca skills get orchestration`. Its worker contract and recovery notes apply on top of this file.
 3. Your own kind is whatever agent you are. Orca has no lookup for it; it only picks the watch mode in § Watch.
 4. Worker kinds: `claude` unless the user asks for another kind (see § Agent support).
-5. Choose the run directory: `RUN=~/.smith/runs/<repo>-<YYYY-MM-DD>`. Reuse it if it exists for today and its `run.json` says `"backend": "orca"`. It holds `run.json` (one record per task) and `gates/<id>.md` (the gate log you keep from the inbox).
+5. Choose the run directory `<run>`: `~/.smith/runs/<repo>-<YYYY-MM-DD>`. Reuse it if it exists for today and its `run.json` says `"backend": "orca"`. If today's directory holds a `run.json` with no `backend` or another one, it belongs to a herdr run: use `~/.smith/runs/<repo>-<YYYY-MM-DD>-orca` instead and never write into the herdr one. `<run>` below is that full path; write it out in every command, since shell variables don't survive between calls. It holds `run.json` (one record per task) and `gates/<id>.md` (the gate log you keep from the inbox).
 6. Create the Orca Run, or rebind to the one in `run.json`:
    ```bash
    orca orchestration run-create --objective "smith <repo> <YYYY-MM-DD>: <ids>" --json   # new run: the id is .result.run.id
@@ -31,7 +31,7 @@ The orchestrator itself can be any agent. Its wake-up mode is in § Watch.
    ```
    Write the run-level fields once:
    ```bash
-   mkdir -p "$RUN/gates"; f="$RUN/run.json"; [ -f "$f" ] || echo '{"tasks":[]}' > "$f"
+   mkdir -p "<run>/gates"; f="<run>/run.json"; [ -f "$f" ] || echo '{"tasks":[]}' > "$f"
    jq --arg r "<orca_run_id>" '.backend = "orca" | .orca_run_id = $r' "$f" > "$f.tmp" && mv "$f.tmp" "$f"
    ```
 
@@ -57,15 +57,15 @@ Two steps, because `worker-start` can't name the branch and `worktree create` ca
 2. Start the worker with the **Kickoff** prompt from `references/prompts.md` (with the orca gate instruction) as its spec. The kickoff is delivered with the spec, so there is no separate send step:
    ```bash
    orca orchestration worker-start --worktree id:<worktree id> --agent claude \
-     --task-title "Smith-<id>" --spec "$(cat "$RUN/kickoff-<id>.md")" --json
+     --task-title "Smith-<id>" --spec "$(cat "<run>/kickoff-<id>.md")" --json
    ```
-   Write the kickoff to `$RUN/kickoff-<id>.md` first so the quoting survives. `.result.state: ready` and `.result.turnStart: observed` mean it landed. Take `.result.taskId`, `.result.dispatchId` and the agent terminal handle (`.result.effects[] | select(.kind == "terminal" and .role == "agent") | .id`).
+   Write the kickoff to `<run>/kickoff-<id>.md` first so the quoting survives. `.result.state: ready` and `.result.turnStart: observed` mean it landed. Take `.result.taskId`, `.result.dispatchId` and the agent terminal handle (`.result.effects[] | select(.kind == "terminal" and .role == "agent") | .id`).
 
    A non-zero exit means it failed. Read `failedStage` and `residualResources` from the output, load Orca's recovery reference (`orca skills get orchestration --reference references/recovery-and-cleanup.md`) and follow it. Never relaunch blindly.
 
 3. Record the task in `run.json`:
    ```bash
-   f="$RUN/run.json"
+   f="<run>/run.json"
    jq --arg id "<id>" --arg branch "<branch>" --arg base "<base-ref>" --arg kind claude \
       --arg wt "<worktree id>" --arg path "<worktree path>" --arg task "<taskId>" \
       --arg disp "<dispatchId>" --arg term "<terminal handle>" --arg now "$(date -u +%FT%TZ)" \
@@ -82,19 +82,19 @@ First-run dialogs (folder trust, login) in a new worktree: none appeared for a C
 Run one watcher for the whole run, not one per worker:
 
 ```bash
-orca orchestration check --wait --types "worker_done,escalation,question" --timeout-ms 3600000 --json
+orca orchestration check --wait --types "worker_done,escalation,question" --timeout-ms 900000 --json
 ```
 
 - **Your agent can run a command in the background and gets re-invoked when it exits** (Claude Code's `run_in_background`): run it that way.
 - **Any other orchestrator:** run it detached, writing to a file, and poll that file at a short interval:
   ```bash
-  nohup sh -c 'orca orchestration check --wait --types "worker_done,escalation,question" --timeout-ms 3600000 --json > "$RUN/inbox.json" 2>/dev/null' >/dev/null 2>&1 &
+  nohup sh -c 'orca orchestration check --wait --types "worker_done,escalation,question" --timeout-ms 900000 --json > "<run>/inbox.json" 2>/dev/null' >/dev/null 2>&1 &
   ```
 
 When it returns, process every message in the batch, then acknowledge the batch with its `deliveryId`. `--ack` can go on the next wait:
 
 ```bash
-orca orchestration check --ack <deliveryId> --wait --types "worker_done,escalation,question" --timeout-ms 3600000 --json
+orca orchestration check --ack <deliveryId> --wait --types "worker_done,escalation,question" --timeout-ms 900000 --json
 ```
 
 **Always ack. A batch you don't ack comes back on the next check, so old gates and old `worker_done` messages replay as if they were new.**
@@ -110,7 +110,7 @@ Map each message to a report (SKILL.md § 4):
 
 Append each message to `gates/<id>.md` and update the task's `gate` and `gate_text` in `run.json`.
 
-An empty or timed-out wait is a checkpoint, not an error. After three empty waits in a row, list the run's workers and act on what Orca says:
+An empty or timed-out wait is a checkpoint, not an error. After every empty wait (15 minutes, the same grace as herdr's STOPPED), list the run's workers and act on what Orca says:
 
 ```bash
 orca orchestration worker-list --run <orca_run_id> --json \
@@ -140,27 +140,27 @@ Once a worker has reached its first gate, record its agent session id in `run.js
 Answer a pending gate or question with the message id from the inbox, quoting the user's words (see "Relaying answers" in `references/prompts.md`):
 
 ```bash
-orca orchestration reply --id <messageId> --body "$(cat "$RUN/reply-<id>.md")" --json
+orca orchestration reply --id <messageId> --body "$(cat "<run>/reply-<id>.md")" --json
 ```
 
-Anything that isn't an answer to a pending ask (new guidance, "also fix X", the ship go-ahead after a `worker_done`):
+The ship go-ahead is the reply to the pending GATE implemented ask. Anything else for a worker that is still working (new guidance, "also fix X"):
 
 ```bash
-orca orchestration send --to dispatch:<dispatchId> --subject "Smith-<id>: <topic>" --body "$(cat "$RUN/msg-<id>.md")" --json
+orca orchestration send --to dispatch:<dispatchId> --subject "Smith-<id>: <topic>" --body "$(cat "<run>/msg-<id>.md")" --json
 ```
 
-The kickoff tells workers to run `orchestration check` at checkpoints, so sent messages get read. Re-arm the watcher after relaying (§ Watch).
+The kickoff tells workers to run `orchestration check` at checkpoints, so sent messages get read. After `worker_done` the dispatch is settled and the worker idles without checking, so review fixes and other follow-ups go through a follow-up Dispatch (§ Resume), never `send`. Re-arm the watcher after relaying (§ Watch).
 
 ## Board
 
 Join `run.json` with the run's live worker rows by dispatch id:
 
 ```bash
-jq -r --slurpfile live <(orca orchestration worker-list --run "$(jq -r .orca_run_id "$RUN/run.json")" --json) '
+jq -r --slurpfile live <(orca orchestration worker-list --run "$(jq -r .orca_run_id "<run>/run.json")" --json) '
   ($live[0].result.workers | map({key: .dispatchId, value: .projection.liveness.verdict}) | from_entries) as $l
   | "id | kind | branch | gate | liveness | PR",
     (.tasks[] | "\(.id) | \(.kind) | \(.branch) | \(.gate) | \($l[.dispatch_id] // "unknown") | \(.pr // "-")")
-' "$RUN/run.json"
+' "<run>/run.json"
 ```
 
 Show it as a table in every report.
@@ -182,13 +182,13 @@ Show it as a table in every report.
    - **Its terminal is still alive** (liveness not `exited`): start a follow-up Dispatch on it. The agent keeps its spec, the user's decisions and its commits in memory.
      ```bash
      orca orchestration worker-start --terminal <handle> --worktree id:<worktree id> \
-       --task-title "Smith-<id> fixes" --spec "$(cat "$RUN/followup-<id>.md")" --json
+       --task-title "Smith-<id> fixes" --spec "$(cat "<run>/followup-<id>.md")" --json
      ```
    - **Its terminal is gone** (Orca restarted, terminal closed): take `session` from `run.json`, or find it with `orca search "Smith-<id>" --path <worktree path> --json` (`.result.hits[0].sessionId`). Open a terminal that resumes it, then supervise that terminal (verified with Claude: the worker kept its memory of earlier dispatches). The new handle is `.result.terminal.handle`:
      ```bash
      orca terminal create --worktree id:<worktree id> --title "Smith-<id>" --command "claude --resume <session id>" --json
      orca orchestration worker-start --terminal <new handle> --worktree id:<worktree id> \
-       --task-title "Smith-<id> fixes" --spec "$(cat "$RUN/followup-<id>.md")" --json
+       --task-title "Smith-<id> fixes" --spec "$(cat "<run>/followup-<id>.md")" --json
      ```
    - **Neither works:** start a fresh worker (§ Spawn step 2, on the existing worktree) and send a short catch-up prompt (issue, PR, current gate, decisions so far).
 3. Update `dispatch_id` and `terminal` in `run.json` and watch as usual (§ Watch).

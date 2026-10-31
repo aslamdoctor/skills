@@ -95,7 +95,7 @@ Ship stacked tasks as stacked PRs (see **Stacked ship** in the templates). After
 
 ## 8. Resume a run
 
-For review feedback, a follow-up or a session that lost track of a run ("resume yesterday's smith run"):
+For review feedback, a follow-up or a session that lost track of a run ("resume yesterday's smith run"). A resume skips § 1 to 3: no new run directory and no new Orca Run.
 
 1. Find the run with `ls -t ~/.smith/runs/` and read its `run.json`. Resume a run only with its own backend (no `backend` field means herdr). If it doesn't match where you are running, tell the user which one it needs and stop.
 2. Restart or reuse each worker in its old conversation: `references/<backend>.md` § Resume. If that isn't possible, start a fresh worker and send a short catch-up prompt (issue, PR, current gate, decisions so far).
