@@ -11,6 +11,7 @@ setup() {
 }
 
 # stub_reply <cmd> <key> <json> [exit]
+# Per-call replies: write $STUB_DIR/<cmd>.<key>.<N>.json for the Nth call (the last file repeats). A <cmd>.<key>.sleep file holding N makes the call sleep N seconds.
 stub_reply() {
 	printf '%s\n' "$3" >"$STUB_DIR/$1.$2.json"
 	if [ -n "${4:-}" ]; then printf '%s\n' "$4" >"$STUB_DIR/$1.$2.exit"; fi

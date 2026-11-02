@@ -76,3 +76,23 @@ hc_turn() {
 }
 
 now() { date '+%Y-%m-%dT%H:%M:%S%z'; }
+
+# Plain `hc send` waits for a person to pause and has no timeout of its own, so bound it.
+# Usage: send_bounded <seconds> <hc send args...>. Never add --force: it would type into a blocked dialog.
+send_bounded() {
+	local secs=$1 pid watcher rc
+	shift
+	hc send "$@" >/dev/null 2>&1 &
+	pid=$!
+	# The watcher traps TERM so that stopping it also stops its own sleep (no orphan on success).
+	(
+		trap '[ -n "${sp:-}" ] && kill "$sp" 2>/dev/null; exit 0' TERM
+		sleep "$secs" & sp=$!
+		wait "$sp"
+		kill "$pid" 2>/dev/null
+	) >/dev/null 2>&1 &
+	watcher=$!
+	wait "$pid" 2>/dev/null; rc=$?
+	kill "$watcher" 2>/dev/null; wait "$watcher" 2>/dev/null
+	return $rc
+}

@@ -21,25 +21,6 @@ run_update '.tasks[$id] = ((.tasks[$id] // {id:$id}) + {gate:$gate, gate_text:$t
 	--arg id "$id" --arg gate "$gate" --arg text "$text" --arg ref "$ref" --arg pr "$pr" \
 	--arg session "$session" --arg now "$(now)"
 
-# Plain `hc send` waits for a person to pause and has no timeout of its own, so bound it here.
-# Never --force: it would type into a blocked dialog.
-send_bounded() {
-	local pid watcher rc
-	hc send "$@" >/dev/null 2>&1 &
-	pid=$!
-	# The watcher traps TERM so that stopping it also stops its own sleep (no orphan on success).
-	(
-		trap '[ -n "${sp:-}" ] && kill "$sp" 2>/dev/null; exit 0' TERM
-		sleep "${MARK_SEND_TIMEOUT:-60}" & sp=$!
-		wait "$sp"
-		kill "$pid" 2>/dev/null
-	) >/dev/null 2>&1 &
-	watcher=$!
-	wait "$pid" 2>/dev/null; rc=$?
-	kill "$watcher" 2>/dev/null; wait "$watcher" 2>/dev/null
-	return $rc
-}
-
 suffix=""
 case $backend in
 herdr-app)
@@ -47,7 +28,7 @@ herdr-app)
 		|| echo "mark.sh: hc label failed for $(worker_label "$id"); gate still recorded" >&2
 	orch=$(jq -r '.orchestrator.address // empty' "$RUN/run.json" 2>/dev/null)
 	sent=false
-	if [ -n "$orch" ] && send_bounded "$orch" "[smith] GATE $gate $(worker_label "$id"): $text | $ref"; then
+	if [ -n "$orch" ] && send_bounded "${MARK_SEND_TIMEOUT:-60}" "$orch" "[smith] GATE $gate $(worker_label "$id"): $text | $ref"; then
 		sent=true
 	fi
 	run_update '.tasks[$id].gate_sent = ($sent == "true") | .tasks[$id].needs_you = true' \
