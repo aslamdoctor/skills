@@ -25,6 +25,14 @@ fi
 n=${#words[@]}
 while [ "$n" -ge 1 ]; do
 	key=$(IFS=.; echo "${words[*]:0:n}")
+	# Optional per-call replies: <cmd>.<key>.<N>.json answers the Nth call of that key (1-based).
+	if [ -f "$d/$cmd.$key.1.json" ]; then
+		cnt=$(( $(cat "$d/$cmd.$key.count" 2>/dev/null || echo 0) + 1 ))
+		echo "$cnt" >"$d/$cmd.$key.count"
+		[ -f "$d/$cmd.$key.$cnt.json" ] || cnt=$(ls "$d/$cmd.$key".*.json | wc -l | tr -d ' ')
+		cat "$d/$cmd.$key.$cnt.json"
+		exit 0
+	fi
 	if [ -f "$d/$cmd.$key.json" ]; then
 		cat "$d/$cmd.$key.json"
 		code=0

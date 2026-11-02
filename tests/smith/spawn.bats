@@ -161,3 +161,78 @@ hc_run_line() { stub_calls hc | rg '^run ' | head -1; }
 	[ "$status" -eq 0 ]
 	hc_run_line | rg -q -- 'claude --resume s1 *$'
 }
+
+@test "refuses_live_worker_by_recorded_hc" {
+	write_run '{"backend":"herdr-app","space":"sp2","orchestrator":{"address":"t9","kind":"claude-code","space":"sp1"},"tasks":{"101":{"id":"101","hc":"t21"}}}'
+	run sp 101 b101 origin/main <<<"x"
+	[ "$status" -eq 3 ]
+	echo "$output" | jq -e '.error | test("still live")' >/dev/null
+	[ -z "$(stub_calls hc | rg '^run ' || true)" ]
+}
+
+@test "tab_lookup_retries_until_terminal_shows_up" {
+	export SPAWN_INTERVAL=0
+	stub_reply herdr-app ls.1 '{"spaces":[{"id":"sp2","name":"s","tabs":[]}]}'
+	rm "$STUB_DIR/herdr-app.ls.json"
+	printf '%s\n' '{"spaces":[{"id":"sp2","name":"s","tabs":[{"id":"tb7","name":"x","terminals":[{"terminal":"t21"}]}]}]}' >"$STUB_DIR/herdr-app.ls.2.json"
+	run sp 101 b101 origin/main <<<"x"
+	[ "$status" -eq 0 ]
+	[ "$(jq -r .tasks.\"101\".tab "$RUN/run.json")" = tb7 ]
+	[ "$(stub_calls herdr-app | rg -c '^ls ')" -eq 2 ]
+	echo "$output" | jq -e '.warnings == []' >/dev/null
+}
+
+@test "tab_never_found_warns_and_records_empty_tab" {
+	export SPAWN_INTERVAL=0
+	stub_reply herdr-app ls '{"spaces":[]}'
+	run sp 101 b101 origin/main <<<"x"
+	[ "$status" -eq 0 ]
+	line=$(echo "$output" | tail -1)
+	echo "$line" | jq -e '.tab == "" and (.warnings | length == 1) and (.warnings[0] | test("tab for t21 not found"))' >/dev/null
+	echo "$output" | rg -q '^\{"warning":"tab for t21'
+	[ -z "$(stub_calls herdr-app | rg 'tab.rename' || true)" ]
+}
+
+@test "rename_failure_warns" {
+	stub_reply herdr-app do.tab.rename '{"error":"nope"}' 1
+	run sp 101 b101 origin/main <<<"x"
+	[ "$status" -eq 0 ]
+	echo "$output" | tail -1 | jq -e '.warnings | length == 1 and (.[0] | test("tab.rename failed"))' >/dev/null
+	echo "$output" | tail -1 | jq -e '.status == "working"' >/dev/null
+}
+
+@test "select_failure_warns" {
+	stub_reply herdr-app do.space.select '{"error":"nope"}' 1
+	run sp 101 b101 origin/main <<<"x"
+	[ "$status" -eq 0 ]
+	echo "$output" | tail -1 | jq -e '.warnings | length == 1 and (.[0] | test("space.select sp1 failed"))' >/dev/null
+}
+
+@test "turn_above_zero_with_idle_reports_working" {
+	stub_reply hc get.t21 '{"state":"live","status":null,"turn":2}'
+	run sp 101 b101 origin/main <<<"x"
+	[ "$status" -eq 0 ]
+	echo "$output" | jq -e '.status == "working"' >/dev/null
+}
+
+@test "done_or_error_at_turn_zero_reports_gone" {
+	stub_reply hc get.t21 '{"state":"live","status":{"state":"error"},"turn":0}'
+	run sp 101 b101 origin/main <<<"x"
+	[ "$status" -eq 0 ]
+	echo "$output" | jq -e '.status == "gone"' >/dev/null
+}
+
+@test "agy_without_conversation_id_warns" {
+	export SPAWN_INTERVAL=0
+	run sp 101 b101 origin/main --kind agy <<<"x"
+	[ "$status" -eq 0 ]
+	echo "$output" | tail -1 | jq -e '.session == "" and (.warnings[0] | test("no agy conversation id"))' >/dev/null
+}
+
+@test "respawn_resets_reported_and_gate_sent" {
+	write_run '{"backend":"herdr-app","space":"sp2","orchestrator":{"address":"t9","kind":"claude-code","space":"sp1"},"tasks":{"101":{"id":"101","hc":"t5","gate":"spec","gate_sent":true,"reported":{"stopped":5,"gone":true}}}}'
+	stub_reply hc get.t5 '{"state":"finished"}'
+	run sp 101 b101 origin/main <<<"x"
+	[ "$status" -eq 0 ]
+	jq -e '.tasks["101"] | .hc == "t21" and .gate == "spec" and .gate_sent == false and .reported == {}' "$RUN/run.json" >/dev/null
+}

@@ -11,6 +11,12 @@ here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 . "$here/../lib.sh"
 
 app_do() { herdr-app "do" "$@"; }
+# Non-fatal problems: printed to stderr and repeated in the "warnings" array of the output line.
+warnings=()
+warn() {
+	warnings+=("$1")
+	jq -nc --arg w "$1" '{warning:$w}' >&2
+}
 
 id=$1; branch=$2; base=$3; shift 3
 kind=${AGENT_KIND:-claude}; resume=""
@@ -53,7 +59,7 @@ fi
 # 3-4. Launch template and session.
 row=$(awk -F'\t' -v k="$kind" '$1 == k { print; exit }' "${LAUNCH_TSV:-$here/launch.tsv}")
 if [ -z "$row" ]; then
-	echo "{\"warning\":\"kind $kind is untested on herdr-app\"}" >&2
+	warn "kind $kind is untested on herdr-app"
 	fresh_t="$kind {prompt}"; resume_t="$kind {prompt}"
 else
 	IFS=$'\t' read -r _ fresh_t resume_t <<<"$row"
@@ -62,7 +68,7 @@ fi
 session=""
 if [ -n "$resume" ]; then
 	if [ "$resume_t" = - ]; then
-		echo "{\"warning\":\"kind $kind has no resume support; starting fresh, send a catch-up prompt\"}" >&2
+		warn "kind $kind has no resume support; starting fresh, send a catch-up prompt"
 		tmpl=$fresh_t
 	else
 		tmpl=$resume_t; session=$resume
@@ -102,10 +108,16 @@ for _ in 1 2 3 4 5 6 7 8 9 10; do
 	[ -n "$tab" ] && break
 	sleep "${SPAWN_INTERVAL:-2}"
 done
-if [ -n "$tab" ]; then
-	app_do tab.rename --id "$tab" --name "$(worker_label "$id")" >/dev/null 2>&1 || true
+if [ -z "$tab" ]; then
+	warn "tab for $addr not found in herdr-app ls; it was not renamed"
+elif ! rn=$(app_do tab.rename --id "$tab" --name "$(worker_label "$id")" 2>&1); then
+	warn "tab.rename failed for $tab: $rn"
 fi
-[ -z "$orch_space" ] || app_do space.select --id "$orch_space" >/dev/null 2>&1 || true
+if [ -z "$orch_space" ]; then
+	warn "no orchestrator space recorded; focus was not handed back"
+elif ! sel=$(app_do space.select --id "$orch_space" 2>&1); then
+	warn "space.select $orch_space failed, focus may still be on the worker: $sel"
+fi
 
 # 7. Confirm the kickoff arrived (it is the agent's own argv, so look at its state).
 status=not_started
@@ -113,7 +125,9 @@ waited=0
 while :; do
 	st=$(hc_state "$addr")
 	case $st in
-		working|blocked|gone) status=$st; break ;;
+		working|blocked) status=$st; break ;;
+		# done/error before any turn: the worker is not coming up, report it as gone.
+		gone|done|error) status=gone; break ;;
 	esac
 	if [ "$(hc_turn "$addr")" -gt 0 ] 2>/dev/null; then status=working; break; fi
 	[ "$waited" -ge "${SPAWN_WAIT:-60}" ] && break
@@ -129,11 +143,12 @@ if [ "$kind" = agy ] && [ -z "$session" ]; then
 		[ -n "$session" ] && break
 		sleep "${SPAWN_INTERVAL:-2}"
 	done
+	[ -n "$session" ] || warn "no agy conversation id; resume will need a catch-up prompt"
 fi
 
 # 8. Record.
-run_update '.tasks[$id] = ((.tasks[$id] // {}) + {id:$id, agent:$agent, hc:$hc, kind:$kind, branch:$branch, base:$base, worktree:$wt, space:$space, tab:$tab, session:$session, needs_you:false, updated:$now}) | .tasks[$id].gate //= "started"' \
+run_update '.tasks[$id] = ((.tasks[$id] // {}) + {id:$id, agent:$agent, hc:$hc, kind:$kind, branch:$branch, base:$base, worktree:$wt, space:$space, tab:$tab, session:$session, needs_you:false, gate_sent:false, reported:{}, updated:$now}) | .tasks[$id].gate //= "started"' \
 	--arg id "$id" --arg agent "$agent" --arg hc "$addr" --arg kind "$kind" --arg branch "$branch" --arg base "$base" \
 	--arg wt "$wt" --arg space "$space" --arg tab "$tab" --arg session "$session" --arg now "$(now)"
 
-jq -c --arg id "$id" --arg status "$status" '.tasks[$id] + {status:$status}' "$RUN/run.json"
+jq -c --arg id "$id" --arg status "$status" '.tasks[$id] + {status:$status, warnings:$ARGS.positional}' "$RUN/run.json" --args ${warnings[@]+"${warnings[@]}"}
