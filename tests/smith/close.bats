@@ -112,3 +112,11 @@ cls() { "$S/close.sh" "$@"; }
 	[ "$status" -eq 1 ]
 	[ -z "$(stub_calls herdr-app | rg 'close' || true)" ]
 }
+
+@test "close_clears_needs_you" {
+	write_run '{"backend":"herdr-app","space":"sp5","board_tab":"tb5","tasks":{"101":{"id":"101","agent":"smith-101","hc":"t21","tab":"tb21","needs_you":true}}}'
+	run cls 101
+	[ "$status" -eq 0 ]
+	[ "$(jq -r '.tasks["101"].closed' "$RUN/run.json")" = true ]
+	[ "$(jq -r '.tasks["101"].needs_you' "$RUN/run.json")" = false ]
+}

@@ -74,7 +74,7 @@ for id in ${ids[@]+"${ids[@]}"}; do
 	fi
 	refresh_live
 	close_if_present tab.close "$tab" "task $id"
-	[ "$tfail" -eq 0 ] && run_update '.tasks[$id].closed = true' --arg id "$id"
+	[ "$tfail" -eq 0 ] && run_update '.tasks[$id].closed = true | .tasks[$id].needs_you = false' --arg id "$id"
 done
 
 if [ "$all" -eq 1 ]; then
