@@ -121,3 +121,25 @@ st() { printf '{"state":"live","turn":%s,"status":{"app":"claude-code","state":"
 	[[ $output == *"still 'idle'"* ]]
 	[[ $output == *"hc read t21 --lines 30"* ]]
 }
+
+@test "failed_send_keeps_needs_you" {
+	stub_reply hc get.t21 "$(st idle)"
+	stub_reply hc send '{}' 1
+	run snd 101 "go"
+	[ "$status" -eq 1 ]
+	[ "$(jq -r '.tasks["101"].needs_you' "$RUN/run.json")" = true ]
+}
+
+@test "blocked_send_keeps_needs_you" {
+	stub_reply hc get.t21 "$(st blocked)"
+	run snd 101 "go"
+	[ "$status" -eq 1 ]
+	[ "$(jq -r '.tasks["101"].needs_you' "$RUN/run.json")" = true ]
+}
+
+@test "unconfirmed_send_clears_needs_you" {
+	stub_reply hc get.t21 "$(st idle)"
+	run snd 101 "go"
+	[ "$status" -eq 2 ]
+	[ "$(jq -r '.tasks["101"].needs_you' "$RUN/run.json")" = false ]
+}

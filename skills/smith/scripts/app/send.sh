@@ -21,7 +21,9 @@ polls() { awk -v w="$1" -v i="$interval" 'BEGIN { n = int(w / i + 0.5); print (n
 # Baseline for watch.sh: a gate the worker marks before its watcher starts still counts as new.
 log="$RUN/gates/$id.md"
 lines=$(if [ -f "$log" ]; then wc -l <"$log" | tr -d ' '; else echo 0; fi)
-run_update '.tasks[$id].gate_lines = ($n | tonumber) | .tasks[$id].needs_you = false' --arg id "$id" --arg n "$lines"
+run_update '.tasks[$id].gate_lines = ($n | tonumber)' --arg id "$id" --arg n "$lines"
+# needs_you is cleared only once the message went out (exit 0 or 2), so a failed send leaves it set.
+clear_needs_you() { run_update '.tasks[$id].needs_you = false' --arg id "$id"; }
 
 if [ "$(hc_state "$target")" = blocked ]; then
 	hc keys "$target" esc >/dev/null 2>&1
@@ -49,8 +51,10 @@ for _ in $(seq "$(polls "${SEND_WAIT:-8}")"); do
 	state=$(hc_state "$target")
 	if [ "$state" = working ] || [ "$(hc_turn "$target")" -gt "$turn0" ] 2>/dev/null; then
 		echo "delivered to $agent (working)"
+		clear_needs_you
 		exit 0
 	fi
 done
+clear_needs_you
 echo "sent to $agent but it is still '$state'; check with: hc read $target --lines 30"
 exit 2
