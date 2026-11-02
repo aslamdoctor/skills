@@ -18,8 +18,7 @@ done
 
 if [ "$cmd" = hc ] && [ "${words[0]:-}" = events ]; then
 	[ -f "$d/hc.events.jsonl" ] && cat "$d/hc.events.jsonl"
-	sleep 3600
-	exit 0
+	exec sleep "${STUB_EVENTS_SLEEP:-3600}"
 fi
 
 n=${#words[@]}

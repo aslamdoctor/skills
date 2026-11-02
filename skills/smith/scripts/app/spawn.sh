@@ -147,7 +147,7 @@ if [ "$kind" = agy ] && [ -z "$session" ]; then
 fi
 
 # 8. Record.
-run_update '.tasks[$id] = ((.tasks[$id] // {}) + {id:$id, agent:$agent, hc:$hc, kind:$kind, branch:$branch, base:$base, worktree:$wt, space:$space, tab:$tab, session:$session, needs_you:false, gate_sent:false, reported:{}, updated:$now}) | .tasks[$id].gate //= "started"' \
+run_update '.tasks[$id] = ((.tasks[$id] // {}) + {id:$id, agent:$agent, hc:$hc, kind:$kind, branch:$branch, base:$base, worktree:$wt, space:$space, tab:$tab, session:$session, needs_you:false, gate_sent:true, reported:{}, updated:$now}) | .tasks[$id].gate //= "started"' \
 	--arg id "$id" --arg agent "$agent" --arg hc "$addr" --arg kind "$kind" --arg branch "$branch" --arg base "$base" \
 	--arg wt "$wt" --arg space "$space" --arg tab "$tab" --arg session "$session" --arg now "$(now)"
 

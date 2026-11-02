@@ -230,9 +230,9 @@ hc_run_line() { stub_calls hc | rg '^run ' | head -1; }
 }
 
 @test "respawn_resets_reported_and_gate_sent" {
-	write_run '{"backend":"herdr-app","space":"sp2","orchestrator":{"address":"t9","kind":"claude-code","space":"sp1"},"tasks":{"101":{"id":"101","hc":"t5","gate":"spec","gate_sent":true,"reported":{"stopped":5,"gone":true}}}}'
+	write_run '{"backend":"herdr-app","space":"sp2","orchestrator":{"address":"t9","kind":"claude-code","space":"sp1"},"tasks":{"101":{"id":"101","hc":"t5","gate":"spec","gate_sent":false,"reported":{"stopped":5,"gone":true}}}}'
 	stub_reply hc get.t5 '{"state":"finished"}'
 	run sp 101 b101 origin/main <<<"x"
 	[ "$status" -eq 0 ]
-	jq -e '.tasks["101"] | .hc == "t21" and .gate == "spec" and .gate_sent == false and .reported == {}' "$RUN/run.json" >/dev/null
+	jq -e '.tasks["101"] | .hc == "t21" and .gate == "spec" and .gate_sent == true and .reported == {}' "$RUN/run.json" >/dev/null
 }
