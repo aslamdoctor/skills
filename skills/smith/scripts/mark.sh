@@ -11,7 +11,9 @@ echo "GATE $gate | $text | $ref" >>"$RUN/gates/$id.md"
 
 pr=""
 [[ $ref == *"/pull/"* ]] && pr=$ref
-session=$(agent_session "$(worker_agent "$id")")
+backend=$(run_backend)
+session=""
+[ "$backend" = herdr-app ] || session=$(agent_session "$(worker_agent "$id")")
 
 run_update '.tasks[$id] = ((.tasks[$id] // {id:$id}) + {gate:$gate, gate_text:$text, ref:$ref, updated:$now})
 	| if $pr != "" then .tasks[$id].pr = $pr else . end
@@ -19,13 +21,43 @@ run_update '.tasks[$id] = ((.tasks[$id] // {id:$id}) + {gate:$gate, gate_text:$t
 	--arg id "$id" --arg gate "$gate" --arg text "$text" --arg ref "$ref" --arg pr "$pr" \
 	--arg session "$session" --arg now "$(now)"
 
-pane=$(task_field "$id" pane)
-if [ -n "$pane" ]; then
-	name=$(worker_label "$id")
-	label="$name $gate"
-	[ "$gate" = question ] && label="$name needs answer"
-	herdr pane report-metadata "$pane" --source smith --title "$name · $gate" \
-		--state-label "idle=$label" --state-label "done=$label" --state-label "blocked=$name blocked" \
-		--state-label "working=$name working" --token "gate=$gate" >/dev/null 2>&1 || true
-fi
-echo "marked $(worker_label "$id"): $gate"
+# Plain `hc send` waits for a person to pause and has no timeout of its own, so bound it here.
+# Never --force: it would type into a blocked dialog.
+send_bounded() {
+	local pid watcher rc
+	hc send "$@" >/dev/null 2>&1 &
+	pid=$!
+	( sleep "${MARK_SEND_TIMEOUT:-60}"; kill "$pid" 2>/dev/null ) >/dev/null 2>&1 &
+	watcher=$!
+	wait "$pid"; rc=$?
+	kill "$watcher" 2>/dev/null; wait "$watcher" 2>/dev/null
+	return $rc
+}
+
+suffix=""
+case $backend in
+herdr-app)
+	hc label "$(worker_hc "$id")" "smith.gate=$gate" >/dev/null 2>&1 \
+		|| echo "mark.sh: hc label failed for $(worker_label "$id"); gate still recorded" >&2
+	orch=$(jq -r '.orchestrator.address // empty' "$RUN/run.json" 2>/dev/null)
+	sent=false
+	if [ -n "$orch" ] && send_bounded "$orch" "[smith] GATE $gate $(worker_label "$id"): $text | $ref"; then
+		sent=true
+	fi
+	run_update '.tasks[$id].gate_sent = ($sent == "true") | .tasks[$id].needs_you = true' \
+		--arg id "$id" --arg sent "$sent"
+	[ "$sent" = true ] || suffix=" (orchestrator not reached; the watcher will report it)"
+	;;
+*)
+	pane=$(task_field "$id" pane)
+	if [ -n "$pane" ]; then
+		name=$(worker_label "$id")
+		label="$name $gate"
+		[ "$gate" = question ] && label="$name needs answer"
+		herdr pane report-metadata "$pane" --source smith --title "$name · $gate" \
+			--state-label "idle=$label" --state-label "done=$label" --state-label "blocked=$name blocked" \
+			--state-label "working=$name working" --token "gate=$gate" >/dev/null 2>&1 || true
+	fi
+	;;
+esac
+echo "marked $(worker_label "$id"): $gate$suffix"
