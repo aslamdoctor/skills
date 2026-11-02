@@ -34,9 +34,10 @@ fi
 # Mod link.
 mods="$HOME/.config/herdr-app/mods"
 link="$mods/smith-board"
-target="$(cd "$here/../.." && pwd)/app/smith-board"
+# Physical paths, so a link made through ~/.claude/skills/smith matches one made from the repo.
+target="$(cd "$here/../.." && pwd -P)/app/smith-board"
 mkdir -p "$mods"
-if [ -L "$link" ] && [ "$(readlink "$link")" = "$target" ]; then
+if [ -L "$link" ] && [ "$(cd "$link" 2>/dev/null && pwd -P)" = "$target" ]; then
 	:
 elif [ -e "$link" ] || [ -L "$link" ]; then
 	fail "$link already exists and is not the smith-board link, move it away first"

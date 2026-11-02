@@ -101,6 +101,24 @@ pre() { "$S/app/preflight.sh" "$@"; }
 	[ -f "$HOME/.config/herdr-app/mods/smith-board/keep" ]
 }
 
+@test "accepts_link_when_run_through_skill_symlink" {
+	ln -s "$REPO_ROOT/skills/smith" "$BATS_TEST_TMPDIR/smith-link"
+	real=$(cd "$REPO_ROOT/skills/smith" && pwd -P)/app/smith-board
+	mkdir -p "$HOME/.config/herdr-app/mods"
+	ln -s "$real" "$HOME/.config/herdr-app/mods/smith-board"
+	run "$BATS_TEST_TMPDIR/smith-link/scripts/app/preflight.sh"
+	[ "$status" -eq 0 ]
+	[ "$(readlink "$HOME/.config/herdr-app/mods/smith-board")" = "$real" ]
+}
+
+@test "creates_physical_link_when_run_through_skill_symlink" {
+	ln -s "$REPO_ROOT/skills/smith" "$BATS_TEST_TMPDIR/smith-link"
+	real=$(cd "$REPO_ROOT/skills/smith" && pwd -P)/app/smith-board
+	run "$BATS_TEST_TMPDIR/smith-link/scripts/app/preflight.sh"
+	[ "$status" -eq 0 ]
+	[ "$(readlink "$HOME/.config/herdr-app/mods/smith-board")" = "$real" ]
+}
+
 @test "tab_new_failure_selects_back_and_errors" {
 	stub_reply herdr-app do.tab.new '{"error":"no mod"}' 1
 	run pre
