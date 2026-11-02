@@ -1,6 +1,6 @@
 ---
 name: smith
-description: Orchestrate several coding tasks in parallel from one Herdr pane, with any coding agent (Claude Code, Codex, Antigravity, Grok, OpenCode, Pi, Copilot, Cursor and the rest Herdr supports, or any other CLI agent). Each task gets its own git worktree, a background Herdr tab and a worker agent. Workers can be different kinds in one run. They stop at gates (spec, implemented, pr), show their gate in the Herdr sidebar and report back to this orchestrator session, which relays the user's decisions. A run is saved to disk, so workers can be resumed with their full conversation later. Works on any git project. Use when the user wants to work on multiple issues or tasks at once, e.g. "work on 101 and 102 in parallel", "spin up workers for these issues", "smith 101 102 103", "/smith", "use codex workers", "pick N issues and run them in parallel", or "resume yesterday's smith run". Requires Herdr (HERDR_ENV=1).
+description: Orchestrate several coding tasks in parallel from one Herdr pane or the Herdr app, with any coding agent (Claude Code, Codex, Antigravity, Grok, OpenCode, Pi, Copilot, Cursor and the rest Herdr supports, or any other CLI agent). Each task gets its own git worktree, a background Herdr tab and a worker agent. Workers can be different kinds in one run. They stop at gates (spec, implemented, pr), show their gate in the Herdr sidebar and report back to this orchestrator session, which relays the user's decisions. A run is saved to disk, so workers can be resumed with their full conversation later. Works on any git project. Use when the user wants to work on multiple issues or tasks at once, e.g. "work on 101 and 102 in parallel", "spin up workers for these issues", "smith 101 102 103", "/smith", "use codex workers", "pick N issues and run them in parallel", or "resume yesterday's smith run". Requires Herdr (HERDR_ENV=1) or the Herdr app (hc).
 ---
 
 # Smith
@@ -16,7 +16,9 @@ Prompt templates are in `references/prompts.md`. Backend-specific steps are in `
 | Condition | Backend |
 |---|---|
 | `HERDR_ENV=1` | herdr |
-| Otherwise | Say Smith needs to run inside a Herdr pane, and stop |
+| `HC_TERMINAL_ID` set and `hc server status` succeeds | herdr-app |
+| Both | Ask the user once which one to use |
+| Neither | Say "smith needs a Herdr TUI pane or the Herdr app", and stop |
 
 Read `references/<backend>.md` now and use its sections wherever this file says § <name>. Read `references/gotchas.md` (the Common section plus your backend's section) before the first run in a session.
 
@@ -26,7 +28,7 @@ See `references/<backend>.md` § Agent support. Worker kinds come from Herdr, an
 
 ## 1. Preflight
 
-1. Run `references/<backend>.md` § Preflight. It checks the environment, finds your own kind, settles worker kinds and creates or reuses the run directory `~/.smith/runs/<repo>-<YYYY-MM-DD>`.
+1. Run `references/<backend>.md` § Preflight. It checks the environment, finds your own kind, settles worker kinds and creates or reuses the run directory `~/.smith/runs/<repo>-<YYYY-MM-DD>` (`-app` is added on herdr-app).
 2. If a project or global rule forbids worktrees, tell the user this skill needs them and ask once. Record a scoped exception in your memory or notes if they agree.
 
 ## 2. Pick the tasks and the setup
@@ -94,7 +96,7 @@ Ship stacked tasks as stacked PRs (see **Stacked ship** in the templates). After
 
 For review feedback, a follow-up or a session that lost track of a run ("resume yesterday's smith run"). A resume skips § 1 to 3: no new run directory.
 
-1. Find the run with `ls -t ~/.smith/runs/` and read its `run.json`.
+1. Find the run with `ls -t ~/.smith/runs/` and read its `run.json`. Resume a run only with its own backend (`run.json` `backend`, none = herdr). If it differs from the current one, say so and stop.
 2. Restart or reuse each worker in its old conversation: `references/<backend>.md` § Resume. If that isn't possible, start a fresh worker and send a short catch-up prompt (issue, PR, current gate, decisions so far).
 3. Send the follow-up prompt, e.g. "<reviewer> reviewed PR <n>. Follow <fix-PR skill path>, stop with the fixes and draft replies for approval." Then watch as usual.
 4. Stacked children: once the parent's fixes are pushed, tell the child to rebase onto the parent branch. After the parent merges, rebase it onto the real base and switch the PR's base.

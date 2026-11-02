@@ -27,3 +27,22 @@
 | A gate is marked but the watcher never reports it | The worker marked it before the watcher started | send.sh records the gate-log baseline when it sends, so this is handled. Always send through send.sh |
 | Opencode/Pi session ID is empty right after spawn | Some integrations report the session only after the first turn | mark.sh refreshes the session ID at every gate |
 | Tier D (custom) worker: no state, BLOCKED never reported | Herdr can't see the agent's state | The watcher uses gate lines plus an unchanged screen for STOPPED. Check the screen yourself after sending |
+
+## Herdr app
+
+| Symptom | Cause | Fix |
+|---|---|---|
+| agy starts but ignores the kickoff | agy only takes an initial prompt with `-i` | Use the `launch.tsv` row as is (`agy -i {prompt}`); don't pass the prompt as a bare argument |
+| agy resume starts a fresh conversation | The resume form is `agy --conversation {session} -i {prompt}`. The conversation id is in `~/.gemini/antigravity-cli/cache/last_conversations.json`, keyed by the worker's cwd (verified live) | Take the session from that file for the worktree path. agy also needs `-i` to take the prompt |
+| Claude shows `idle` right after launch | Its boot idle at turn 0 comes before the kickoff starts | spawn.sh waits for `working`, `blocked` or `turn > 0` (60 s). Don't read `idle` at turn 0 as finished |
+| Worker is `blocked` right after spawn | Claude and agy ask for folder trust on first run in a new folder or worktree path | Read it with `hc read` and `herdr-app shot`, bring the dialog to the user, then answer with send.sh |
+| `send.sh` exits 1 with "blocked on a dialog" | `hc send` is refused while the worker is blocked | send.sh presses Esc first. If the dialog stays, read it and bring it to the user. Never `hc send --force` |
+| `hc send` hangs | It waits for the person to pause typing and has no timeout of its own | Scripts bound it (send.sh `SEND_TIMEOUT` 30 s, mark.sh 60 s). A bounded failure means not delivered |
+| No STOPPED report arrives, no note from the worker | A turn end gives no note to the parent terminal | STOPPED comes only from `S/app/watch.sh`. Keep one watcher armed per run and re-arm it after each report |
+| `--notify` report never shows up | The orchestrator was typing or in a dialog, so `hc send` refused it | watch.sh queues the report and retries every pass without blocking other tasks. Wait or read the screen |
+| `hc run --name smith-<id>` succeeds but no worker starts | A finished terminal with that name still exists. Finished terminals stay in `hc ls` until removed | `S/app/close.sh <id>` removes it (after the user agrees), then spawn again |
+| Terminal missing from `herdr-app ls` right after `hc run` | The app hasn't placed it yet | spawn.sh retries the lookup. Don't spawn a second copy |
+| Tab id doesn't look like the label | The `herdr.tab` label value is the tab id (`tb…`), not `smith-<id>` | Use the recorded `.tab` from `run.json` |
+| Board tab doesn't show a `main.js` change | An open Board tab doesn't reload the mod | Close the Board tab and create it again (`S/app/preflight.sh`). Confirm with `herdr-app shot` |
+| Board shows no state for a worker | `agents()` doesn't list pane-less hc workers | The mod reads state from `terminals()`. Keep it that way |
+| Unsure which hc version works | hc 0.1.16 (herdr-app 0.1.16) is the verified version | Check `hc --version` and test a spawn and a send before a large run on another version |

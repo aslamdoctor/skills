@@ -19,12 +19,12 @@ GATE pr: after I say ship, run <ship skill or steps> with base <pr-base>.
 
 **Dependency note**, when a task builds on another task in the same run: "Your dependency is <X>, which is on this branch" or "<Y> is being built in parallel on a separate branch, so don't depend on it, and raise it as an open question if the spec turns out to need it." Name the files both workers are likely to touch, and say which worker owns any shared entry (docs section, error-code list, registry line).
 
-### Gate instruction (herdr)
+### Gate instruction
 
 ```
 Work in gates. At each gate, run this command, then STOP and wait for my next message:
 RUN=<run> <skill-scripts>/mark.sh <id> <gate> "<one-sentence status>" "<path, commit or PR URL>"
-It updates the run record and the Herdr sidebar label. Ask questions in plain text; don't open interactive question dialogs. If you need a decision, mark gate 'question' with the question as the status, and stop.
+It updates the run record and tells the orchestrator. Ask questions in plain text; don't open interactive question dialogs. If you need a decision, mark gate 'question' with the question as the status, and stop.
 ```
 
 ## Spec approval
