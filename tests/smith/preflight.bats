@@ -68,7 +68,7 @@ pre() { "$S/app/preflight.sh" "$@"; }
 	stub_reply herdr-app ls '{"spaces":[{"id":"sp5","name":"x","tabs":[{"id":"tb5","name":"Board"}]}]}'
 	run pre
 	[ "$status" -eq 0 ]
-	! stub_calls herdr-app | rg -q 'space.new|tab.new'
+	[ -z "$(stub_calls herdr-app | rg 'space.new|tab.new' || true)" ]
 	[ "$(jq -r .space "$RUN/run.json")" = sp5 ]
 }
 
@@ -78,7 +78,7 @@ pre() { "$S/app/preflight.sh" "$@"; }
 	run pre
 	[ "$status" -eq 0 ]
 	calls=$(stub_calls herdr-app)
-	! echo "$calls" | rg -q 'space.new|tab.close'
+	[ -z "$(echo "$calls" | rg 'space.new|tab.close' || true)" ]
 	echo "$calls" | rg -q 'do tab.new --space sp5'
 	[ "$(jq -r .board_tab "$RUN/run.json")" = tb3 ]
 }
@@ -108,4 +108,14 @@ pre() { "$S/app/preflight.sh" "$@"; }
 	echo "$output" | jq -e '.error' >/dev/null
 	stub_calls herdr-app | rg -q 'do space.select --id sp1'
 	[ "$(jq -r .space "$RUN/run.json")" = sp2 ]
+}
+
+@test "ls_failure_errors_without_changes" {
+	write_run '{"space":"sp5","board_tab":"tb5","tasks":{}}'
+	stub_reply herdr-app ls '{}' 1
+	run pre
+	[ "$status" -eq 1 ]
+	echo "$output" | jq -e '.error' >/dev/null
+	[ "$(jq -r .space "$RUN/run.json")" = sp5 ]
+	[ -z "$(stub_calls herdr-app | rg 'space.new' || true)" ]
 }

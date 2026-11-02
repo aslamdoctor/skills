@@ -45,7 +45,7 @@ else
 fi
 
 # Space and Board tab.
-ls_json=$(herdr-app ls 2>/dev/null || echo '{"spaces":[]}')
+ls_json=$(herdr-app ls 2>/dev/null) && jq -e '.spaces | type == "array"' <<<"$ls_json" >/dev/null 2>&1 || fail "herdr-app ls failed"
 space=$(jq -r '.space // empty' "$RUN/run.json")
 board=$(jq -r '.board_tab // empty' "$RUN/run.json")
 changed=0
