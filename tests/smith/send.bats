@@ -39,7 +39,8 @@ st() { printf '{"state":"live","turn":%s,"status":{"app":"claude-code","state":"
 	printf '%s\n' "$(st working)" >"$STUB_DIR/hc.get.t21.4.json"
 	run snd 101 "go"
 	[ "$status" -eq 0 ]
-	mapfile -t calls < <(stub_calls hc | rg '^(keys|send) ')
+	calls=()
+	while IFS= read -r l; do calls+=("$l"); done < <(stub_calls hc | rg '^(keys|send) ')
 	[ "${#calls[@]}" -eq 2 ]
 	[ "${calls[0]}" = "keys t21 esc " ]
 	[[ ${calls[1]} == "send t21 "* ]]
