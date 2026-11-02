@@ -51,12 +51,13 @@ now_ms() {
 }
 
 # Background work is tracked so the trap can stop it: a foreground sleep would delay the trap.
-ev_pid=""; nap_pid=""
+ev_pid=""; nap_pid=""; tick_pid=""
 tmp=$(mktemp -d)
 mkdir -p "$tmp/q" "$tmp/parent"
 cleanup() {
 	[ -n "$ev_pid" ] && kill "$ev_pid" 2>/dev/null
 	[ -n "$nap_pid" ] && kill "$nap_pid" 2>/dev/null
+	[ -n "$tick_pid" ] && kill "$tick_pid" 2>/dev/null
 	rm -rf "$tmp"
 }
 trap cleanup EXIT
@@ -64,17 +65,25 @@ trap 'exit 0' INT TERM HUP
 
 nap() { sleep "$1" & nap_pid=$!; wait "$nap_pid" 2>/dev/null; nap_pid=""; }
 
+# One fifo, opened read-write so it never reports EOF, carries both hc's events and a line from a
+# ticker every $tick seconds. The loop uses a plain blocking read: `read -t` is unreliable on macOS
+# bash 3.2 (it returns 1 on a timeout and can spin inside its SIGALRM handler).
 start_stream() {
-	rm -f "$tmp/ev"; mkfifo "$tmp/ev"
-	hc events --label "$label" --json >"$tmp/ev" 2>/dev/null &
+	hc events --label "$label" --json >&3 2>/dev/null &
 	ev_pid=$!
-	exec 3<"$tmp/ev"
 }
 stop_stream() {
-	exec 3<&-
 	[ -n "$ev_pid" ] && kill "$ev_pid" 2>/dev/null
 	[ -n "$ev_pid" ] && wait "$ev_pid" 2>/dev/null
 	ev_pid=""
+}
+# kill -0 succeeds on an unreaped zombie, so ask ps for the state.
+stream_alive() {
+	local st
+	[ -n "$ev_pid" ] || return 1
+	st=$(ps -o stat= -p "$ev_pid" 2>/dev/null) || return 1
+	case $st in "" | Z*) return 1 ;; esac
+	return 0
 }
 
 log_lines() { if [ -f "$1" ]; then wc -l <"$1" | tr -d ' '; else echo 0; fi; }
@@ -203,20 +212,18 @@ pass() {
 }
 
 pass
+mkfifo "$tmp/ev"
+exec 3<>"$tmp/ev"
+( while sleep "$tick"; do echo tick; done ) >&3 &
+tick_pid=$!
 start_stream
-while :; do
-	if IFS= read -r -t "$tick" -u 3 _line; then
+while IFS= read -r -u 3 _line; do
+	if stream_alive; then
 		pass
 	else
-		rc=$?
-		if [ "$rc" -gt 128 ]; then
-			pass   # tick
-		else
-			# The event stream ended. Keep watching on ticks and reopen it.
-			stop_stream
-			nap "$tick"
-			pass
-			start_stream
-		fi
+		# The event stream ended. Keep watching on ticks and reopen it.
+		stop_stream
+		pass
+		start_stream
 	fi
 done

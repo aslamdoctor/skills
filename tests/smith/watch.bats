@@ -314,3 +314,13 @@ stop_watch() {
 	[ -z "$(pgrep -f 'sleep 3731' || true)" ]
 	[ -z "$(pgrep -f "$S/app/watch.sh" || true)" ]
 }
+
+@test "runs_on_bash_3_2_without_reopening_stream" {
+	hc_get working "$NOW" 1
+	/bin/bash "$S/app/watch.sh" >"$OUT" 2>&1 &
+	WPID=$!
+	sleep 4
+	[ "$(stub_calls hc | rg -c '^events ')" -eq 1 ]
+	stop_watch 0
+	[ -z "$(pgrep -f 'sleep 3731' || true)" ]
+}
