@@ -27,9 +27,15 @@ send_bounded() {
 	local pid watcher rc
 	hc send "$@" >/dev/null 2>&1 &
 	pid=$!
-	( sleep "${MARK_SEND_TIMEOUT:-60}"; kill "$pid" 2>/dev/null ) >/dev/null 2>&1 &
+	# The watcher traps TERM so that stopping it also stops its own sleep (no orphan on success).
+	(
+		trap '[ -n "${sp:-}" ] && kill "$sp" 2>/dev/null; exit 0' TERM
+		sleep "${MARK_SEND_TIMEOUT:-60}" & sp=$!
+		wait "$sp"
+		kill "$pid" 2>/dev/null
+	) >/dev/null 2>&1 &
 	watcher=$!
-	wait "$pid"; rc=$?
+	wait "$pid" 2>/dev/null; rc=$?
 	kill "$watcher" 2>/dev/null; wait "$watcher" 2>/dev/null
 	return $rc
 }

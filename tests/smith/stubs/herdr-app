@@ -34,6 +34,8 @@ while [ "$n" -ge 1 ]; do
 		exit 0
 	fi
 	if [ -f "$d/$cmd.$key.json" ]; then
+		# Optional: <cmd>.<key>.sleep holds N seconds first (exec, so a kill ends it).
+		[ -f "$d/$cmd.$key.sleep" ] && exec sleep "$(cat "$d/$cmd.$key.sleep")"
 		cat "$d/$cmd.$key.json"
 		code=0
 		[ -f "$d/$cmd.$key.exit" ] && code=$(cat "$d/$cmd.$key.exit")
