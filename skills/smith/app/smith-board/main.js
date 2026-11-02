@@ -45,7 +45,8 @@ export default class Board extends View {
         await this.load(cx);
       }
     });
-    cx.timer.every(30000, (cx) => cx.notify());
+    // Reloads run.json too, so the board still refreshes when watchFolder fails and the loop above ends.
+    cx.timer.every(30000, (cx) => this.load(cx));
   }
 
   async load(cx) {
