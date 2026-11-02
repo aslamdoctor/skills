@@ -1,0 +1,3 @@
+claude	claude --session-id {session} {prompt}	claude --resume {session} {prompt}
+agy	agy -i {prompt}	-
+pi	pi {prompt}	pi --session {session} {prompt}
