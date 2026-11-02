@@ -40,7 +40,7 @@
 | `hc send` hangs | It waits for the person to pause typing and has no timeout of its own | Scripts bound it (send.sh `SEND_TIMEOUT` 30 s, mark.sh 60 s). A bounded failure means not delivered |
 | No STOPPED report arrives, no note from the worker | A turn end gives no note to the parent terminal | STOPPED comes only from `S/app/watch.sh`. Keep one watcher armed per run and re-arm it after each report |
 | `--notify` report never shows up | The orchestrator was typing or in a dialog, so `hc send` refused it | watch.sh queues the report and retries every pass without blocking other tasks. Wait or read the screen |
-| `hc run --name smith-<id>` succeeds but no worker starts | A finished terminal with that name still exists. Finished terminals stay in `hc ls` until removed | `S/app/close.sh <id>` removes it (after the user agrees), then spawn again |
+| A finished worker still shows up in `hc ls --all` under the same name | Finished terminals stay listed with their name until removed. A new `hc run --name` with that name still works and gets a new address | Always address workers by the hc address recorded in `run.json`, never by name. `S/app/close.sh <id>` removes the old terminal (after the user agrees) |
 | Terminal missing from `herdr-app ls` right after `hc run` | The app hasn't placed it yet | spawn.sh retries the lookup. Don't spawn a second copy |
 | Tab id doesn't look like the label | The `herdr.tab` label value is the tab id (`tb…`), not `smith-<id>` | Use the recorded `.tab` from `run.json` |
 | Board tab doesn't show a `main.js` change | An open Board tab doesn't reload the mod | Close the Board tab and create it again (`S/app/preflight.sh`). Confirm with `herdr-app shot` |
