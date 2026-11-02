@@ -1,6 +1,6 @@
 ---
 name: smith
-description: Orchestrate several coding tasks in parallel from one Herdr pane or Orca terminal, with any coding agent (Claude Code, Codex, Antigravity, Grok, OpenCode, Pi, Copilot, Cursor and the rest Herdr supports, or any other CLI agent; Claude Code workers on Orca). Each task gets its own git worktree, a background Herdr tab or Orca workspace, and a worker agent. Workers can be different kinds in one run. They stop at gates (spec, implemented, pr), show their gate in the Herdr or Orca sidebar and report back to this orchestrator session, which relays the user's decisions. A run is saved to disk, so workers can be resumed with their full conversation later. Works on any git project. Use when the user wants to work on multiple issues or tasks at once, e.g. "work on 101 and 102 in parallel", "spin up workers for these issues", "smith 101 102 103", "/smith", "use codex workers", "pick N issues and run them in parallel", or "resume yesterday's smith run". Requires Herdr (HERDR_ENV=1) or Orca.
+description: Orchestrate several coding tasks in parallel from one Herdr pane, with any coding agent (Claude Code, Codex, Antigravity, Grok, OpenCode, Pi, Copilot, Cursor and the rest Herdr supports, or any other CLI agent). Each task gets its own git worktree, a background Herdr tab and a worker agent. Workers can be different kinds in one run. They stop at gates (spec, implemented, pr), show their gate in the Herdr sidebar and report back to this orchestrator session, which relays the user's decisions. A run is saved to disk, so workers can be resumed with their full conversation later. Works on any git project. Use when the user wants to work on multiple issues or tasks at once, e.g. "work on 101 and 102 in parallel", "spin up workers for these issues", "smith 101 102 103", "/smith", "use codex workers", "pick N issues and run them in parallel", or "resume yesterday's smith run". Requires Herdr (HERDR_ENV=1).
 ---
 
 # Smith
@@ -9,28 +9,25 @@ This session is the orchestrator. It never writes task code itself. It creates w
 
 Workers are Smith's copies, named after their task: the worker for task 101 is `Smith-101` in the sidebar, toasts and reports.
 
-Prompt templates are in `references/prompts.md`. Backend-specific steps are in `references/herdr.md` and `references/orca.md`; this file points at their sections as "`references/<backend>.md` § <name>".
+Prompt templates are in `references/prompts.md`. Backend-specific steps are in `references/<backend>.md`; this file points at their sections as "`references/<backend>.md` § <name>".
 
 ## 0. Pick the backend
 
 | Condition | Backend |
 |---|---|
 | `HERDR_ENV=1` | herdr |
-| `ORCA_TERMINAL_HANDLE` is set and `orca status --json` returns `"ok": true` | orca |
-| Both | Ask the user once which one to use (structured question tool if you have one) |
-| Neither | Say Smith needs to run inside a Herdr pane or an Orca terminal, and stop |
+| Otherwise | Say Smith needs to run inside a Herdr pane, and stop |
 
 Read `references/<backend>.md` now and use its sections wherever this file says § <name>. Read `references/gotchas.md` (the Common section plus your backend's section) before the first run in a session.
 
 ## Agent support
 
-See `references/<backend>.md` § Agent support. On Herdr, worker kinds come from Herdr and tasks in one run can use different kinds. On Orca, workers are Claude Code; other kinds are best-effort.
+See `references/<backend>.md` § Agent support. Worker kinds come from Herdr, and tasks in one run can use different kinds.
 
 ## 1. Preflight
 
 1. Run `references/<backend>.md` § Preflight. It checks the environment, finds your own kind, settles worker kinds and creates or reuses the run directory `~/.smith/runs/<repo>-<YYYY-MM-DD>`.
-2. Orca runs record `"backend": "orca"` in `run.json`. The herdr scripts don't write the field, so a run.json without `backend` is a herdr run.
-3. If a project or global rule forbids worktrees, tell the user this skill needs them and ask once. Record a scoped exception in your memory or notes if they agree.
+2. If a project or global rule forbids worktrees, tell the user this skill needs them and ask once. Record a scoped exception in your memory or notes if they agree.
 
 ## 2. Pick the tasks and the setup
 
@@ -47,8 +44,8 @@ See `references/<backend>.md` § Agent support. On Herdr, worker kinds come from
 | Ship flow | A ship skill, or the project's PR rules |
 | Pre-ship review | A self-review or preflight skill, if the project has one (else none) |
 | Test and lint commands | Instruction files, package.json / composer.json / Makefile |
-| Worker kind per task | Herdr: your own kind. Orca: claude; any other kind is best-effort, label it "gates may not hold" |
-| Worktree root | Herdr: `~/<repo>-wt/<branch>` (override with `WT_ROOT`). Orca: Orca's own `~/orca/workspaces/<repo>/<name>` |
+| Worker kind per task | Your own kind |
+| Worktree root | `~/<repo>-wt/<branch>` (override with `WT_ROOT`) |
 | Gates | Default `spec / implemented / pr` |
 
 Show the detected setup as one table and confirm it with the user before spawning anything. Use your structured question tool if you have one, otherwise ask in plain text.
@@ -95,9 +92,9 @@ Ship stacked tasks as stacked PRs (see **Stacked ship** in the templates). After
 
 ## 8. Resume a run
 
-For review feedback, a follow-up or a session that lost track of a run ("resume yesterday's smith run"). A resume skips § 1 to 3: no new run directory and no new Orca Run.
+For review feedback, a follow-up or a session that lost track of a run ("resume yesterday's smith run"). A resume skips § 1 to 3: no new run directory.
 
-1. Find the run with `ls -t ~/.smith/runs/` and read its `run.json`. Resume a run only with its own backend (no `backend` field means herdr). If it doesn't match where you are running, tell the user which one it needs and stop.
+1. Find the run with `ls -t ~/.smith/runs/` and read its `run.json`.
 2. Restart or reuse each worker in its old conversation: `references/<backend>.md` § Resume. If that isn't possible, start a fresh worker and send a short catch-up prompt (issue, PR, current gate, decisions so far).
 3. Send the follow-up prompt, e.g. "<reviewer> reviewed PR <n>. Follow <fix-PR skill path>, stop with the fixes and draft replies for approval." Then watch as usual.
 4. Stacked children: once the parent's fixes are pushed, tell the child to rebase onto the parent branch. After the parent merges, rebase it onto the real base and switch the PR's base.
@@ -106,7 +103,7 @@ For review feedback, a follow-up or a session that lost track of a run ("resume 
 
 - The user approves every spec, every ship and every text posted to GitHub or anywhere else. Workers never decide for the user, and neither do you. Relay, recommend, wait.
 - Workers stop at each gate and ask in plain text, never through an interactive dialog. The kickoff tells them this.
-- Never focus or close tabs, terminals or worktrees you didn't create. Never stop the Herdr server or Orca.
+- Never focus or close tabs, terminals or worktrees you didn't create. Never stop the Herdr server.
 - Your own replies to the user follow the user's normal reporting rules.
 
 ## Install for other agents

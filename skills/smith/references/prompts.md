@@ -1,11 +1,11 @@
 # Worker prompt templates
 
-Fill the `<...>` slots from the setup table. Send each prompt the way your backend says: on herdr with `scripts/send.sh`, reading the message from a heredoc on stdin; on orca as the `worker-start` spec, a `reply` or a `send` (see `references/orca.md`). Where a template has a `<herdr | orca>` choice, keep only your backend's part. Keep project-specific rules (base branch, commit format, test setup, ship skill) in the prompt, because the worker doesn't know it's part of a run.
+Fill the `<...>` slots from the setup table. Send each prompt the way your backend says (on herdr with `scripts/send.sh`, reading the message from a heredoc on stdin). Keep project-specific rules (base branch, commit format, test setup, ship skill) in the prompt, because the worker doesn't know it's part of a run.
 
 ## Kickoff
 
 ```
-You are a worker for <task: issue URL or one-line description>, run from an orchestrator agent in another <Herdr tab | Orca terminal>. You are in a dedicated git worktree. Its branch already exists and was cut from <base-ref>. PRs target <pr-base>. Don't create branches or worktrees, and never git push until told.
+You are a worker for <task: issue URL or one-line description>, run from an orchestrator agent in another Herdr tab. You are in a dedicated git worktree. Its branch already exists and was cut from <base-ref>. PRs target <pr-base>. Don't create branches or worktrees, and never git push until told.
 
 Before starting read: <issue + comments via gh / the parent issue / project docs or notes / the repo instruction files (AGENTS.md, CLAUDE.md, ...)>. Follow the conventions of recent sibling work on this branch.<dependency note>
 
@@ -27,25 +27,17 @@ RUN=<run> <skill-scripts>/mark.sh <id> <gate> "<one-sentence status>" "<path, co
 It updates the run record and the Herdr sidebar label. Ask questions in plain text; don't open interactive question dialogs. If you need a decision, mark gate 'question' with the question as the status, and stop.
 ```
 
-### Gate instruction (orca)
-
-```
-Work in gates. At GATE spec and GATE implemented, run the orchestration ask command from your Orca preamble with the question "GATE <gate>: <one-sentence status> | <path or commit>" followed by your open questions, and wait for the answer. If the ask times out, run the --resume <messageId> command it prints and keep waiting on that same message; never ask the same question twice. At every gate also set your card: orca worktree set --worktree active --comment "Smith-<id>: <gate>" --unread --json. Run orchestration check --terminal <your handle> before you start each new file and before every gate, and follow any message from me. Ask questions in plain text through the same ask command (gate word: question); don't open interactive question dialogs. At GATE pr, after the ship steps are done, send worker_done --outcome succeeded with your summary, the PR URL and --files-modified, then stop.
-```
-
 ## Spec approval
 
 ```
-Spec approved by <user>. Answers: 1) <...> 2) <...> 3) <...>. Then implement it and stop at GATE implemented (<lint>, the tests the task asks for, commit, <pre-ship review> findings, <herdr: mark.sh implemented | orca: ask GATE implemented> with the commit hash). Don't push.
+Spec approved by <user>. Answers: 1) <...> 2) <...> 3) <...>. Then implement it and stop at GATE implemented (<lint>, the tests the task asks for, commit, <pre-ship review> findings, mark.sh implemented with the commit hash). Don't push.
 ```
 
 ## Ship
 
 ```
-Ship approved by <user>. Fetch origin and rebase on origin/<pr-base> if it has moved. Run <ship skill> with base <pr-base> and push. Keep borrowed env files and symlinks out of every commit. Answers for the skill: <pre-answered questions, e.g. preflight: already ran at GATE implemented, skip it unless you committed since (then rerun it and report findings before pushing); automated local QA: No (local site points at the main checkout); staging: skip; reviewer: <name>>. For review-bot findings: verify them, then stop and report them in plain text. Do the same for any thread replies, which <user> approves before you post. At the end, <herdr: mark gate pr with the final status and the PR URL | orca: send worker_done with the PR URL>.
+Ship approved by <user>. Fetch origin and rebase on origin/<pr-base> if it has moved. Run <ship skill> with base <pr-base> and push. Keep borrowed env files and symlinks out of every commit. Answers for the skill: <pre-answered questions, e.g. preflight: already ran at GATE implemented, skip it unless you committed since (then rerun it and report findings before pushing); automated local QA: No (local site points at the main checkout); staging: skip; reviewer: <name>>. For review-bot findings: verify them, then stop and report them in plain text. Do the same for any thread replies, which <user> approves before you post. At the end, mark gate pr with the final status and the PR URL.
 ```
-
-On orca, add to the Ship message: "Pushing and opening the PR are approved by <user> with this message, which overrides your preamble's no-posting line for these two actions only. Report review-bot findings and draft thread replies through ask (gate word: question) and wait; never stop without asking. Thread replies and comments still need <user>'s approval through ask."
 
 **Stacked ship**, when the base is another unmerged task branch: set the PR base to the parent branch, add "Stacked on PR <n>. Retarget to <pr-base> after it merges." under the implementation notes, and link the issue to the PR directly (closing keywords don't link on a non-default base).
 

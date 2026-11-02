@@ -27,18 +27,3 @@
 | A gate is marked but the watcher never reports it | The worker marked it before the watcher started | send.sh records the gate-log baseline when it sends, so this is handled. Always send through send.sh |
 | Opencode/Pi session ID is empty right after spawn | Some integrations report the session only after the first turn | mark.sh refreshes the session ID at every gate |
 | Tier D (custom) worker: no state, BLOCKED never reported | Herdr can't see the agent's state | The watcher uses gate lines plus an unchanged screen for STOPPED. Check the screen yourself after sending |
-
-## Orca
-
-| Symptom | Cause | Fix |
-|---|---|---|
-| Old gates or an old `worker_done` come back on the next check | The inbox replays a delivery until it is acked | Process the whole batch, then `check --ack <deliveryId>` (it can go on the next `--wait`) |
-| Worker branch is `<git-user>/<name>`, or `<branch>-2` | `worker-start` has no branch flag and Orca prefixes its default branch; `worktree create --branch` adds a numeric suffix when the name is taken | Create the worktree with `orca worktree create --branch <branch>` first, check `git branch --show-current`, and stop if it differs |
-| A gate question shows up twice, or the worker goes idle at a gate | `orchestration ask` blocks for 10 minutes, then times out | The worker runs the `--resume <messageId>` command it prints and waits on the same message. The orca gate instruction says never to ask twice |
-| Worker won't push or open the PR at the pr gate | Orca's worker preamble has a no-posting line for the whole run | The orca Ship message approves pushing and opening the PR explicitly. Thread replies and comments still go through `ask` |
-| Branch is gone after cleanup, or still there | `orca worktree rm` deletes the branch only when it can prove it's merged; it keeps one that predated the worktree or that it can't prove is merged | Remove a worktree only after confirming its PR merged, then check `git branch --list <branch>` |
-| An `orca` command starts a screen reader or hits the wrong build | On Linux outside Orca, bare `orca` is the GNOME screen reader; dev checkouts use `orca-dev` | Resolve the executable once (`ORCA_CLI_COMMAND`, `orca-dev`, `orca-ide` on Linux) and use it everywhere |
-| `worker-list` shows dispatches from other runs | `worker-list` without --run lists every dispatch the calling terminal can see, or every Run when unbound | Always pass `--run <orca_run_id>` |
-| A non-Claude worker acts without approval or stops waiting | Only Claude was seen holding a blocking `ask` through timeouts; a kind that kills long commands drops the wait (gates may not hold) | Use claude workers. Label other kinds "best-effort: gates may not hold" in the setup table |
-| `worktree create --branch <branch>` gives `<branch>-2` for a branch that already exists | Orca only attaches an existing branch that still points at the base; one with its own commits, or one checked out elsewhere, gets a suffixed new branch cut from the base | Continue an existing task in its existing worktree. The branch check after create stops a suffixed spawn |
-| `worker-release` reports `retained` and nothing closes | Reason `ownership_transferred`: a follow-up Dispatch took over the terminal. Reason `external_terminal`: smith opened the terminal with `terminal create` (resume route) | Release the latest dispatch. Close a terminal you created with `orca terminal close --terminal <handle>` |

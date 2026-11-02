@@ -1,8 +1,8 @@
 # Smith
 
-An agent skill for working on several coding tasks in parallel from one [Herdr](https://herdr.dev) pane or Orca terminal.
+An agent skill for working on several coding tasks in parallel from one [Herdr](https://herdr.dev) pane.
 
-You tell your agent which issues to work on. It becomes the orchestrator: each task gets its own git worktree, a background Herdr tab or Orca workspace, and a worker agent. Workers stop at gates (spec, implemented, PR) and report back. The orchestrator brings you their questions with a recommendation and relays your answers, so nothing is shipped or posted without your OK.
+You tell your agent which issues to work on. It becomes the orchestrator: each task gets its own git worktree, a background Herdr tab and a worker agent. Workers stop at gates (spec, implemented, PR) and report back. The orchestrator brings you their questions with a recommendation and relays your answers, so nothing is shipped or posted without your OK.
 
 ```
 /smith 101 102 103
@@ -10,9 +10,9 @@ You tell your agent which issues to work on. It becomes the orchestrator: each t
 
 ## What you get
 
-- Each task runs on its own branch in `~/<repo>-wt/<branch>` (in Orca: `~/orca/workspaces/<repo>/<name>`), so workers never touch each other's files or your main checkout.
+- Each task runs on its own branch in `~/<repo>-wt/<branch>`, so workers never touch each other's files or your main checkout.
 - Workers write a spec and stop. After you approve it, they implement, commit and stop again. They ship only when you say so.
-- A watcher per worker wakes the orchestrator when a gate is reached, a dialog is waiting, or a worker stops. A Herdr toast and sound tell you when you're needed. In Orca, workers ask through Orca's orchestration inbox and the workspace card shows the gate.
+- A watcher per worker wakes the orchestrator when a gate is reached, a dialog is waiting, or a worker stops. A Herdr toast and sound tell you when you're needed.
 - Workers are Smith's copies, named after their task. Each worker pane shows its name and gate (`Smith-102 · spec`) in the Herdr sidebar.
 - Workers can be Claude Code, Codex, Antigravity, Grok, OpenCode, Pi, Copilot, Cursor or any other agent Herdr supports. Other CLI agents work through a custom-command mode, and one run can mix agent kinds.
 - A run is saved to `~/.smith/runs/`. Workers can be restarted later in their original conversation, for example to handle review comments the next day.
@@ -21,7 +21,7 @@ You tell your agent which issues to work on. It becomes the orchestrator: each t
 
 ## Requirements
 
-- [Herdr](https://herdr.dev) 0.9 or newer, with the orchestrator running inside a Herdr pane, or Orca 1.4.245 or newer, with the orchestrator running in an Orca terminal
+- [Herdr](https://herdr.dev) 0.9 or newer, with the orchestrator running inside a Herdr pane
 - `git`, `jq` and `bash`
 - `gh` if you want the orchestrator to pick issues or open PRs
 - At least one coding agent CLI. Install its Herdr integration (`herdr integration install <name>`) to get session resume
@@ -47,7 +47,7 @@ For an agent without skill support, tell it: "Read ~/skills/skills/smith/SKILL.m
 
 ## Usage
 
-Start your agent in a Herdr pane or an Orca terminal inside the repo, then ask for parallel work:
+Start your agent in a Herdr pane inside the repo, then ask for parallel work:
 
 - `/smith 101 102 103`
 - "Work on 101 and 102 in parallel"
@@ -74,14 +74,11 @@ A typical run:
 
 The orchestrator can be any of these too. An agent that can run a background command and gets woken when it exits (Claude Code, for example) uses that. Other agents are woken by a Herdr prompt from a detached watcher.
 
-On Orca, only Claude Code workers are supported for now. Other agents Orca can launch are allowed, but their gates may not hold.
-
 ## How it works
 
 ```
 SKILL.md                 orchestrator instructions
 references/herdr.md      Herdr steps: spawn, send, watch, board, resume
-references/orca.md       the same steps through Orca's orchestration CLI
 references/prompts.md    kickoff, approval, ship and relay templates for workers
 references/gotchas.md    known problems from real runs and their fixes
 scripts/spawn.sh         worktree + background tab + worker, recorded in run.json
@@ -91,8 +88,6 @@ scripts/watch.sh         wait until a worker needs the orchestrator, then report
 scripts/board.sh         status table for the whole run
 scripts/agents.tsv       per-agent integration, resume arguments and transcript paths
 ```
-
-Only the Herdr backend uses these scripts. Orca runs call the `orca` CLI directly.
 
 Each run keeps its state in `~/.smith/runs/<repo>-<date>/`: `run.json` holds one record per task (branch, worktree, tab, pane, agent kind, session ID, gate, PR), and `gates/<id>.md` is the gate log.
 
