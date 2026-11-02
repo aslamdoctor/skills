@@ -51,25 +51,24 @@ now_ms() {
 }
 
 # Background work is tracked so the trap can stop it: a foreground sleep would delay the trap.
-ev_pid=""; nap_pid=""; tick_pid=""
+ev_pid=""; tick_pid=""
 tmp=$(mktemp -d)
 mkdir -p "$tmp/q" "$tmp/parent"
 cleanup() {
 	[ -n "$ev_pid" ] && kill "$ev_pid" 2>/dev/null
-	[ -n "$nap_pid" ] && kill "$nap_pid" 2>/dev/null
 	[ -n "$tick_pid" ] && kill "$tick_pid" 2>/dev/null
 	rm -rf "$tmp"
 }
 trap cleanup EXIT
 trap 'exit 0' INT TERM HUP
 
-nap() { sleep "$1" & nap_pid=$!; wait "$nap_pid" 2>/dev/null; nap_pid=""; }
-
 # One fifo, opened read-write so it never reports EOF, carries both hc's events and a line from a
 # ticker every $tick seconds. The loop uses a plain blocking read: `read -t` is unreliable on macOS
 # bash 3.2 (it returns 1 on a timeout and can spin inside its SIGALRM handler).
+# Children get only a write-only fd 4 and no stdio of ours: if this shell is SIGKILLed they hit
+# SIGPIPE, and a caller reading our output to EOF isn't held open by a leftover sleep.
 start_stream() {
-	hc events --label "$label" --json >&3 2>/dev/null &
+	hc events --label "$label" --json >&4 2>/dev/null </dev/null 3<&- &
 	ev_pid=$!
 }
 stop_stream() {
@@ -213,15 +212,16 @@ pass() {
 
 pass
 mkfifo "$tmp/ev"
-exec 3<>"$tmp/ev"
-( while sleep "$tick"; do echo tick; done ) >&3 &
+exec 3<>"$tmp/ev" 4>"$tmp/ev"
+parent=$$
+( while sleep "$tick"; do kill -0 "$parent" 2>/dev/null || exit 0; echo tick; done ) >&4 2>/dev/null </dev/null 3<&- &
 tick_pid=$!
 start_stream
 while IFS= read -r -u 3 _line; do
-	if stream_alive; then
+	if stream_alive || [ "$_line" != tick ]; then
 		pass
 	else
-		# The event stream ended. Keep watching on ticks and reopen it.
+		# The event stream ended. Keep watching, and reopen it at most once per tick.
 		stop_stream
 		pass
 		start_stream

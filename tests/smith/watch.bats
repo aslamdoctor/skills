@@ -241,6 +241,44 @@ stop_watch() {
 	[ "$(stub_calls hc | rg -c '^events ')" -ge 2 ]
 }
 
+@test "stream_that_prints_then_exits_reopens_once_per_tick" {
+	# a stream that writes one line and exits must not be reopened in a hot loop
+	export STUB_EVENTS_SLEEP=0 SMITH_TICK=2
+	hc_get working "$NOW" 1
+	echo '{"error":"core down"}' >"$STUB_DIR/hc.events.jsonl"
+	start_watch
+	stop_watch 5
+	n=$(stub_calls hc | rg -c '^events ')
+	[ "$n" -le 5 ]
+}
+
+@test "capture_returns_when_watcher_exits" {
+	# the ticker's sleep must not hold the caller's stdout or stderr open after exit
+	export SMITH_TICK=20
+	hc_get working "$NOW" 1
+	# the task is closed after 1 s and an event line at 2 s triggers the pass that exits
+	echo 2 >"$STUB_DIR/hc.events.delay"
+	echo '{"method":"event","params":{"terminal":"t21","type":"status","data":{}}}' >"$STUB_DIR/hc.events.jsonl"
+	( sleep 1; jq '.tasks["101"].closed = true' "$RUN/run.json" >"$RUN/r.tmp" && mv "$RUN/r.tmp" "$RUN/run.json" ) &
+	start=$(date +%s)
+	out=$("$S/app/watch.sh" 2>&1)
+	[ $(( $(date +%s) - start )) -lt 10 ]
+	[ "$out" = "no live workers" ]
+}
+
+@test "sigkill_leaves_no_ticker" {
+	# the ticker notices its parent is gone within a tick; hc events dies on its next write (SIGPIPE)
+	hc_get working "$NOW" 1
+	start_watch
+	sleep 1.5
+	kill -9 "$WPID"
+	wait "$WPID" 2>/dev/null || true
+	sleep 2.5
+	left=$(pgrep -f "$S/app/watch.sh" || true)
+	pkill -f 'sleep 3731' || true
+	[ -z "$left" ]
+}
+
 @test "failed_hc_get_is_unknown_not_gone" {
 	stub_reply hc get.t21 'boom' 1
 	start_watch
