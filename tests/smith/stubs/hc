@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+# Test stub for hc, herdr-app and herdr (copies of this file; the name comes from $0).
+# Logs every call to $STUB_DIR/<cmd>.log and answers from $STUB_DIR/<cmd>.<key>.json.
+# <key> = leading words (before the first -flag, max 3) joined by '.', e.g. "get.t21".
+# If no reply file matches, shorter keys are tried, then "{}" exit 0.
+cmd=$(basename "$0")
+d=${STUB_DIR:?set STUB_DIR}
+mkdir -p "$d"
+printf '%q ' "$@" >>"$d/$cmd.log"
+printf '\n' >>"$d/$cmd.log"
+
+words=()
+for a in "$@"; do
+	case $a in -*) break ;; esac
+	words+=("$a")
+	[ "${#words[@]}" -ge 3 ] && break
+done
+
+if [ "$cmd" = hc ] && [ "${words[0]:-}" = events ]; then
+	[ -f "$d/hc.events.jsonl" ] && cat "$d/hc.events.jsonl"
+	sleep 3600
+	exit 0
+fi
+
+n=${#words[@]}
+while [ "$n" -ge 1 ]; do
+	key=$(IFS=.; echo "${words[*]:0:n}")
+	if [ -f "$d/$cmd.$key.json" ]; then
+		cat "$d/$cmd.$key.json"
+		code=0
+		[ -f "$d/$cmd.$key.exit" ] && code=$(cat "$d/$cmd.$key.exit")
+		exit "$code"
+	fi
+	n=$((n - 1))
+done
+echo '{}'
+exit 0

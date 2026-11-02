@@ -50,4 +50,29 @@ agent_session() {
 # For custom (tier D) workers Herdr reports no agent; "alive" means the pane still exists.
 pane_alive() { herdr pane get "$1" >/dev/null 2>&1; }
 
+# herdr-app backend. run.json has "backend": "herdr-app"; no field means the Herdr TUI.
+run_backend() { jq -r '.backend // "herdr"' "$RUN/run.json" 2>/dev/null || echo herdr; }
+
+# The hc address of a worker, else its agent name (hc accepts both).
+worker_hc() { local a; a=$(task_field "$1" hc); echo "${a:-$(worker_agent "$1")}"; }
+
+# working|idle|done|blocked|error|gone. Never fails: anything unexpected is "gone".
+hc_state() {
+	local s
+	s=$(hc get "$1" --json 2>/dev/null | jq -r 'if .state != "live" then "gone" else (.status.state // "idle") end' 2>/dev/null) || true
+	echo "${s:-gone}"
+}
+
+hc_status_ms() {
+	local v
+	v=$(hc get "$1" --json 2>/dev/null | jq -r '.status_ms // empty' 2>/dev/null) || true
+	echo "${v:-0}"
+}
+
+hc_turn() {
+	local v
+	v=$(hc get "$1" --json 2>/dev/null | jq -r '.turn // empty' 2>/dev/null) || true
+	echo "${v:-0}"
+}
+
 now() { date '+%Y-%m-%dT%H:%M:%S%z'; }
