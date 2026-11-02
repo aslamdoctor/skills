@@ -11,7 +11,8 @@ setup() {
 	export S="$REPO_ROOT/skills/smith/scripts"
 	export SMITH_TICK=1 SMITH_GRACE_SEC=2 STUB_EVENTS_SLEEP=3731
 	OUT=$BATS_TEST_TMPDIR/out
-	NOW=$(( $(date +%s) * 1000 ))
+	NOW=$(perl -MTime::HiRes=time -e 'printf "%d", time() * 1000')
+	FUTURE=$((NOW + 600000))
 	OLD=1000
 	base_run '"gate_sent":true'
 }
@@ -79,9 +80,9 @@ stop_watch() {
 }
 
 @test "blocked_flash_not_reported" {
-	hc_get blocked "$NOW" 1 t5
+	# future-dated status_ms: never 5 s old while the test runs
+	hc_get blocked "$FUTURE" 1 t5
 	start_watch
-	# 5 s threshold: the status is fresh when checked, and the test ends before it ages
 	stop_watch 3
 	[ ! -s "$OUT" ]
 }
@@ -148,7 +149,7 @@ stop_watch() {
 }
 
 @test "stopped_waits_for_grace" {
-	hc_get idle "$NOW" 3
+	hc_get idle "$FUTURE" 3
 	start_watch
 	stop_watch 1
 	[ ! -s "$OUT" ]
@@ -209,10 +210,15 @@ stop_watch() {
 
 @test "events_line_triggers_check_without_waiting_for_tick" {
 	export SMITH_TICK=30
-	hc_get idle "$OLD" 3
+	hc_get working "$NOW" 1
+	# the stub prints the event line 2 s after the stream opens
+	echo 2 >"$STUB_DIR/hc.events.delay"
 	echo '{"method":"event","params":{"terminal":"t21","type":"status","data":{}}}' >"$STUB_DIR/hc.events.jsonl"
 	start_watch
-	stop_watch 3
+	sleep 1
+	hc_get idle "$OLD" 3
+	# only the event can wake it before the 30 s tick
+	stop_watch 5
 	[[ $(cat "$OUT") == "[smith] STOPPED Smith-101"* ]]
 }
 
@@ -224,12 +230,78 @@ stop_watch() {
 }
 
 @test "dead_event_stream_keeps_ticking" {
-	# the stub's events stream exits at once; the watcher still reports on its ticks
+	# the stub's events stream exits at once; the watcher keeps ticking and reopens it
 	export STUB_EVENTS_SLEEP=0
-	hc_get idle "$OLD" 3
+	hc_get working "$NOW" 1
 	start_watch
+	sleep 2
+	hc_get idle "$OLD" 3
 	stop_watch 6
 	[[ $(cat "$OUT") == "[smith] STOPPED Smith-101"* ]]
+	[ "$(stub_calls hc | rg -c '^events ')" -ge 2 ]
+}
+
+@test "failed_hc_get_is_unknown_not_gone" {
+	stub_reply hc get.t21 'boom' 1
+	start_watch
+	stop_watch 3
+	[ ! -s "$OUT" ]
+}
+
+@test "removed_terminal_is_gone" {
+	stub_reply hc get.t21 '{"error":{"kind":"not_found","message":"no terminal"}}' 3
+	start_watch
+	stop_watch
+	[ "$(cat "$OUT")" = "[smith] GONE Smith-101 (gone): no gate line yet. RUN=$RUN" ]
+}
+
+@test "missing_run_json_exits_1" {
+	rm "$RUN/run.json"
+	run --separate-stderr "$S/app/watch.sh"
+	[ "$status" -eq 1 ]
+	[[ $stderr == *"run.json"* ]]
+}
+
+@test "two_pending_tasks_both_reported_once" {
+	write_run '{"backend":"herdr-app","orchestrator":{"address":"t9"},"tasks":{"101":{"id":"101","hc":"t21","gate_sent":false},"102":{"id":"102","hc":"t22","gate_sent":false}}}'
+	hc_get working "$NOW" 1
+	stub_reply hc get.t22 "{\"state\":\"live\",\"status\":{\"state\":\"working\"},\"status_ms\":$NOW,\"turn\":1,\"parent\":\"t9\"}"
+	start_watch
+	stop_watch
+	[ "$(rg -c '^\[smith\] GATE Smith-10[12] ' "$OUT")" -eq 2 ]
+	jq -e '.tasks["101"].gate_sent and .tasks["102"].gate_sent' "$RUN/run.json" >/dev/null
+	start_watch
+	stop_watch 3
+	[ ! -s "$OUT" ]
+}
+
+@test "notify_refused_send_does_not_block_other_tasks" {
+	export SMITH_NOTIFY_RETRY=1
+	write_run '{"backend":"herdr-app","orchestrator":{"address":"t9"},"tasks":{"101":{"id":"101","hc":"t21","gate_sent":true},"102":{"id":"102","hc":"t22","gate_sent":true}}}'
+	hc_get idle "$OLD" 3
+	stub_reply hc get.t22 '{"state":"live","status":{"state":"idle"},"status_ms":1000,"turn":3,"parent":"t9"}'
+	# send 1 (task 101) is refused, then everything is accepted
+	echo '{}' >"$STUB_DIR/hc.send.t9.1.json"; echo 1 >"$STUB_DIR/hc.send.t9.1.exit"
+	echo '{}' >"$STUB_DIR/hc.send.t9.2.json"
+	echo '{}' >"$STUB_DIR/hc.send.t9.3.json"
+	start_watch --notify
+	for _ in $(seq 40); do
+		[ "$(jq -r '.tasks["102"].reported.stopped // empty' "$RUN/run.json")" = "$OLD" ] && break
+		sleep 0.1
+	done
+	# task 102 went out right after the refusal, before 101's retry could have succeeded
+	[ "$(jq -r '.tasks["102"].reported.stopped' "$RUN/run.json")" = "$OLD" ]
+	for _ in $(seq 40); do
+		[ "$(jq -r '.tasks["101"].reported.stopped // empty' "$RUN/run.json")" = "$OLD" ] && break
+		sleep 0.1
+	done
+	stop_watch 1
+	[ "$(jq -r '.tasks["101"].reported.stopped' "$RUN/run.json")" = "$OLD" ]
+	sends=$(stub_calls hc | rg '^send ')
+	[ "$(wc -l <<<"$sends" | tr -d ' ')" -eq 3 ]
+	[[ $(awk "NR==1" <<<"$sends") == *Smith-101* ]]
+	[[ $(awk "NR==2" <<<"$sends") == *Smith-102* ]]
+	[[ $(awk "NR==3" <<<"$sends") == *Smith-101* ]]
 }
 
 @test "stop_leaves_no_processes" {

@@ -17,6 +17,8 @@ for a in "$@"; do
 done
 
 if [ "$cmd" = hc ] && [ "${words[0]:-}" = events ]; then
+	# Optional: hc.events.delay holds N seconds before the events file is printed.
+	[ -f "$d/hc.events.delay" ] && sleep "$(cat "$d/hc.events.delay")"
 	[ -f "$d/hc.events.jsonl" ] && cat "$d/hc.events.jsonl"
 	exec sleep "${STUB_EVENTS_SLEEP:-3600}"
 fi
@@ -30,7 +32,9 @@ while [ "$n" -ge 1 ]; do
 		echo "$cnt" >"$d/$cmd.$key.count"
 		[ -f "$d/$cmd.$key.$cnt.json" ] || cnt=$(ls "$d/$cmd.$key".*.json | wc -l | tr -d ' ')
 		cat "$d/$cmd.$key.$cnt.json"
-		exit 0
+		code=0
+		[ -f "$d/$cmd.$key.$cnt.exit" ] && code=$(cat "$d/$cmd.$key.$cnt.exit")
+		exit "$code"
 	fi
 	if [ -f "$d/$cmd.$key.json" ]; then
 		# Optional: <cmd>.<key>.sleep holds N seconds first (exec, so a kill ends it).
