@@ -19,7 +19,7 @@ function duration(ms) {
 // `live` is the matching agents() entry, if any. A task with no entry has ended or never reported.
 function rowState(task, live) {
   if (task.closed === true) return "done";
-  if (task.needs_you === true ||live?.status === "blocked") return "needs";
+  if (task.needs_you === true || live?.status === "blocked") return "needs";
   if (!live) return "done";
   if (live.status === "working") return "working";
   return "waiting";
