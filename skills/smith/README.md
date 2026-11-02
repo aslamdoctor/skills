@@ -1,8 +1,8 @@
 # Smith
 
-An agent skill for working on several coding tasks in parallel from one [Herdr](https://herdr.dev) pane.
+An agent skill for working on several coding tasks in parallel from one [Herdr](https://herdr.dev) pane or from the Herdr app.
 
-You tell your agent which issues to work on. It becomes the orchestrator: each task gets its own git worktree, a background Herdr tab and a worker agent. Workers stop at gates (spec, implemented, PR) and report back. The orchestrator brings you their questions with a recommendation and relays your answers, so nothing is shipped or posted without your OK.
+You tell your agent which issues to work on. It becomes the orchestrator: each task gets its own git worktree, a background tab and a worker agent. Workers stop at gates (spec, implemented, PR) and report back. The orchestrator brings you their questions with a recommendation and relays your answers, so nothing is shipped or posted without your OK.
 
 ```
 /smith 101 102 103
@@ -18,11 +18,14 @@ You tell your agent which issues to work on. It becomes the orchestrator: each t
 - A run is saved to `~/.smith/runs/`. Workers can be restarted later in their original conversation, for example to handle review comments the next day.
 - A task that depends on another task's unmerged branch is cut from that branch and shipped as a stacked PR.
 - Base branch, branch naming, commit format, ship flow and test commands come from the repo's instruction files (AGENTS.md, CLAUDE.md and similar). You confirm them once per run.
+- In the Herdr app, a run gets its own space with a Board tab (the `smith-board` mod) that lists every worker with its gate, and puts the ones waiting on you at the top. Gate messages are typed straight into the orchestrator's terminal.
 
 ## Requirements
 
-- [Herdr](https://herdr.dev) 0.9 or newer, with the orchestrator running inside a Herdr pane
-- `git`, `jq` and `bash`
+- One of these, with the orchestrator running inside it:
+  - [Herdr](https://herdr.dev) 0.9 or newer (the TUI), in a Herdr pane
+  - The Herdr app 0.1.16 or newer, with its `hc` and `herdr-app` commands on your PATH
+- `git`, `jq` and `bash` (macOS's bash 3.2 is fine)
 - `gh` if you want the orchestrator to pick issues or open PRs
 - At least one coding agent CLI. Install its Herdr integration (`herdr integration install <name>`) to get session resume
 
@@ -47,7 +50,7 @@ For an agent without skill support, tell it: "Read ~/skills/skills/smith/SKILL.m
 
 ## Usage
 
-Start your agent in a Herdr pane inside the repo, then ask for parallel work:
+Start your agent inside the repo, in a Herdr pane or a Herdr app terminal, then ask for parallel work. Smith picks the backend from where it runs, and asks once if both are available:
 
 - `/smith 101 102 103`
 - "Work on 101 and 102 in parallel"
@@ -74,22 +77,33 @@ A typical run:
 
 The orchestrator can be any of these too. An agent that can run a background command and gets woken when it exits (Claude Code, for example) uses that. Other agents are woken by a Herdr prompt from a detached watcher.
 
+In the Herdr app, workers are `hc` terminals and fewer kinds are checked so far:
+
+| Tier | Agents | What works |
+|---|---|---|
+| A | claude, agy | Everything, including resume with full context |
+| B | pi | Start, gates and watchers. Resume falls back to a catch-up prompt |
+| C | Everything else | Untested. Add a row to `scripts/app/launch.tsv` and try it before relying on it |
+
 ## How it works
 
 ```
 SKILL.md                 orchestrator instructions
 references/herdr.md      Herdr steps: spawn, send, watch, board, resume
+references/herdr-app.md  the same steps for the Herdr app
 references/prompts.md    kickoff, approval, ship and relay templates for workers
 references/gotchas.md    known problems from real runs and their fixes
 scripts/spawn.sh         worktree + background tab + worker, recorded in run.json
 scripts/send.sh          prompt a worker and confirm it was delivered
-scripts/mark.sh          workers call this at each gate (gate log, run.json, sidebar label)
+scripts/mark.sh          workers call this at each gate (gate log, run.json, sidebar label or app message)
 scripts/watch.sh         wait until a worker needs the orchestrator, then report or wake it
-scripts/board.sh         status table for the whole run
+scripts/board.sh         status table for the whole run (both backends)
 scripts/agents.tsv       per-agent integration, resume arguments and transcript paths
+scripts/app/             Herdr app versions: preflight, spawn, send, watch, close, launch.tsv
+app/smith-board/         Herdr app mod that draws the run's Board tab
 ```
 
-Each run keeps its state in `~/.smith/runs/<repo>-<date>/`: `run.json` holds one record per task (branch, worktree, tab, pane, agent kind, session ID, gate, PR), and `gates/<id>.md` is the gate log.
+Each run keeps its state in `~/.smith/runs/<repo>-<date>/` (`<repo>-<date>-app/` for the Herdr app): `run.json` holds one record per task (branch, worktree, tab, pane, agent kind, session ID, gate, PR), and `gates/<id>.md` is the gate log.
 
 ## Notes
 

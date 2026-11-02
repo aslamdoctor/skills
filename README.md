@@ -6,7 +6,7 @@ Agent skills I use day to day. Each one is a folder with a `SKILL.md`, in the [A
 
 | Skill | What it does |
 |---|---|
-| [smith](skills/smith) | Runs several coding tasks in parallel from one Herdr pane, each in its own worktree with its own worker agent |
+| [smith](skills/smith) | Runs several coding tasks in parallel from one Herdr pane or the Herdr app, each in its own worktree with its own worker agent |
 | [content‑writer](skills/content-writer) | Builds a full content package for a topic: social posts, a blog post and cover image prompts. Uses the three skills below |
 | [content‑creator](skills/content-creator) | SEO blog content with brand voice analysis, plus Python scripts for voice and SEO scoring |
 | [social‑content](skills/social-content) | Platform-specific posts for LinkedIn, X, Instagram, TikTok and Facebook |
