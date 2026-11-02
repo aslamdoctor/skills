@@ -1,2 +1,4 @@
 .DS_Store
 .lock
+skills/smith/app/smith-board/gpui-kit.d.ts
+skills/smith/app/smith-board/jsconfig.json
