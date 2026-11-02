@@ -30,7 +30,8 @@ cls() { "$S/close.sh" "$@"; }
 @test "close_all_closes_space_last" {
 	run cls --all
 	[ "$status" -eq 0 ]
-	mapfile -t calls < <(stub_calls herdr-app | rg '(tab|space)\.close')
+	calls=()
+	while IFS= read -r l; do calls+=("$l"); done < <(stub_calls herdr-app | rg '(tab|space)\.close')
 	[ "${#calls[@]}" -eq 4 ]
 	[[ ${calls[2]} == *"tab.close --id tb5 "* ]]
 	[[ ${calls[3]} == *"space.close --id sp5 "* ]]
@@ -63,6 +64,7 @@ cls() { "$S/close.sh" "$@"; }
 	[ "$status" -eq 1 ]
 	[[ $stderr == *"101"* ]]
 	[ -n "$(stub_calls hc | rg '^kill t22 ')" ]
+	[ "$(jq -r '.tasks["101"].closed // false' "$RUN/run.json")" = false ]
 	[ "$(jq -r '.tasks["102"].closed' "$RUN/run.json")" = true ]
 }
 
@@ -79,4 +81,34 @@ cls() { "$S/close.sh" "$@"; }
 	run cls --all
 	[ "$status" -eq 0 ]
 	[ -z "$(stub_calls herdr-app | rg -w 'space.close|tb5|sp5' || true)" ]
+}
+
+@test "runs_on_bash_3_2" {
+	run /bin/bash "$S/close.sh" --all
+	[ "$status" -eq 0 ]
+	[ "$(stub_calls hc | rg -c '^kill ')" -eq 2 ]
+	[ -n "$(stub_calls herdr-app | rg 'space.close --id sp5')" ]
+}
+
+@test "not_found_with_other_exit_code_is_a_failure" {
+	stub_reply hc kill.t21 '{"error":"not_found"}' 1
+	run --separate-stderr cls 101
+	[ "$status" -eq 1 ]
+	[[ $stderr == *"kill t21"* ]]
+	[ "$(jq -r '.tasks["101"].closed // false' "$RUN/run.json")" = false ]
+}
+
+@test "ls_failure_is_reported" {
+	stub_reply herdr-app ls 'not json' 1
+	run --separate-stderr cls 101
+	[ "$status" -eq 1 ]
+	[[ $stderr == *"herdr-app ls"* ]]
+	[ "$(jq -r '.tasks["101"].closed // false' "$RUN/run.json")" = false ]
+}
+
+@test "ls_non_json_is_reported" {
+	stub_reply herdr-app ls 'oops'
+	run cls --all
+	[ "$status" -eq 1 ]
+	[ -z "$(stub_calls herdr-app | rg 'close' || true)" ]
 }
