@@ -14,7 +14,7 @@ Launch commands for each kind are in `S/app/launch.tsv`. Tasks in one run can us
 | B | pi | Best effort. No session id at spawn, so resume falls back to a catch-up prompt |
 | C | Everything else | Untested. Add a row to `launch.tsv` and check it live before relying on it |
 
-Workers launch with `--outlive-parent`, the default model and the default permission mode. No bypass or auto-accept flags. The orchestrator works the same way as on the Herdr TUI backend: its wake-up mode depends on its own kind (see § Watch).
+Workers launch with `--outlive-parent`, the default model and the default permission mode. No bypass or auto-accept flags. The orchestrator can be any agent kind. How it gets woken up depends on its own kind (see § Watch).
 
 ## Preflight
 
@@ -49,11 +49,11 @@ Arm one watcher per run, after every prompt that starts work. Choose the mode fr
 - **Your agent can run a command in the background and gets re-invoked when it exits** (Claude Code's `run_in_background`, for example): run `RUN=<run> S/app/watch.sh` that way. It prints the report and exits.
 - **Any other orchestrator:** run it detached with notify mode:
   ```bash
-  nohup env RUN=<run> S/app/watch.sh --notify >/dev/null 2>&1 &
+  nohup env RUN=<run> S/app/watch.sh --notify >/dev/null 2>&1 & echo $! > <run>/watch.pid
   ```
-  Reports arrive as typed messages. `--notify` queues each report and retries it on every pass, so a refused send never blocks the watcher.
+  Reports arrive as typed messages. `--notify` keeps running after a report, queues each report and retries it on every pass, so a refused send never blocks the watcher. Start it once per run. If it has exited (check `kill -0 "$(cat <run>/watch.pid)"`), start a new one, which overwrites `watch.pid`.
 
-Re-arm it after each report. It exits with "no live workers" once every task is closed, or gone and already reported.
+In background-task mode the watcher exits after printing a report, so re-arm it after each report. In both modes it exits with "no live workers" once every task is closed, or gone and already reported.
 
 Gate messages and hc notes arrive as typed messages: `[smith] GATE <gate> Smith-<id>: <status> | <ref>` (sent by mark.sh) and `<hc>` notes (hc's own reports for child workers). The watcher reports the rest:
 - **GATE:** mark.sh could not reach the orchestrator, so the gate line is only in the log.
@@ -67,7 +67,7 @@ Read the screen: `hc read smith-<id> --lines 50`. For a dialog, take a screensho
 
 ## Relay answers
 
-Relay the user's decisions with send.sh, quoting the user's words (see "Relaying answers" in `references/prompts.md`), and re-arm the watcher.
+Relay the user's decisions with send.sh, quoting the user's words (see "Relaying answers" in `references/prompts.md`), and make sure a watcher is armed (§ Watch).
 
 ```bash
 RUN=<run> S/app/send.sh <id> <<'EOF'
@@ -90,7 +90,7 @@ After editing the mod in `app/smith-board/`, run `herdr-app check <mod folder>` 
 - Ask the user first. Then run `RUN=<run> S/app/close.sh <id>...`, or `--all` to also close the Board tab and the run's space.
 - close.sh kills and removes each task's terminal, closes its tab and marks the task closed. It only touches ids recorded in `run.json`, and it keeps worktrees, branches and `run.json`.
 - Exit codes: 0 all went well, 1 something other than "already gone" failed (a warning is on stderr and the other tasks still run), 2 usage error or unknown task id (nothing touched).
-- Stop any detached watcher you started (`pkill -f "app/watch.sh"`).
+- Stop the detached watcher this run started, by its recorded pid only: `kill "$(cat <run>/watch.pid)"`, then `rm <run>/watch.pid`. Skip it if the file is missing or the process has already exited. A background-task watcher needs no kill.
 - When everything has merged, offer to remove the worktrees (`git worktree remove <path>`), delete the local branches and archive the run directory.
 - Never touch spaces, tabs, terminals or mods the run didn't create. Never stop the app or the core.
 
