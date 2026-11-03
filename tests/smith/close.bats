@@ -8,9 +8,9 @@ setup() {
 	export RUN STUB_DIR
 	export PATH="$REPO_ROOT/tests/smith/stubs:$PATH"
 	export S="$REPO_ROOT/skills/smith/scripts/app"
-	write_run '{"backend":"herdr-app","space":"sp5","board_tab":"tb5","tasks":{"101":{"id":"101","agent":"smith-101","hc":"t21","tab":"tb21","worktree":"/wt/101"},"102":{"id":"102","agent":"smith-102","hc":"t22","tab":"tb22","worktree":"/wt/102"}}}'
-	# User terminals t7/t8 live in sp1; the run's tabs live in sp5.
-	stub_reply herdr-app ls '{"spaces":[{"id":"sp1","name":"mine","tabs":[{"id":"tb1","name":"x","terminals":[{"terminal":"t7"},{"terminal":"t8"}]}]},{"id":"sp5","name":"smith","tabs":[{"id":"tb5","name":"Board","terminals":[]},{"id":"tb21","name":"Smith-101","terminals":[{"terminal":"t21"}]},{"id":"tb22","name":"Smith-102","terminals":[{"terminal":"t22"}]}]}]}'
+	write_run '{"backend":"herdr-app","orchestrator":{"address":"t7","space":"sp1","tab":"tb1"},"tasks":{"101":{"id":"101","agent":"smith-101","hc":"t21","tab":"tb21","worktree":"/wt/101"},"102":{"id":"102","agent":"smith-102","hc":"t22","tab":"tb22","worktree":"/wt/102"}}}'
+	# The user's terminals t7/t8 and the run's worker tabs share space sp1.
+	stub_reply herdr-app ls '{"spaces":[{"id":"sp1","name":"mine","tabs":[{"id":"tb1","name":"x","terminals":[{"terminal":"t7"},{"terminal":"t8"}]},{"id":"tb21","name":"Smith-101","terminals":[{"terminal":"t21"}]},{"id":"tb22","name":"Smith-102","terminals":[{"terminal":"t22"}]}]}]}'
 }
 
 cls() { "$S/close.sh" "$@"; }
@@ -21,21 +21,17 @@ cls() { "$S/close.sh" "$@"; }
 	[ "$(stub_calls hc | rg '^kill ' | sort | tr '\n' '|')" = "kill t21 |kill t22 |" ]
 	[ "$(stub_calls hc | rg '^rm ' | sort | tr '\n' '|')" = "rm t21 |rm t22 |" ]
 	[ -z "$(stub_calls hc | rg -w 't7|t8' || true)" ]
-	[ -z "$(stub_calls herdr-app | rg -w 'sp1|tb1|space.close|quit' || true)" ]
+	[ -z "$(stub_calls herdr-app | rg -w 'tb1|space.close|quit' || true)" ]
 	[ -n "$(stub_calls herdr-app | rg 'tab.close --id tb21 --confirmed true')" ]
 	[ -n "$(stub_calls herdr-app | rg 'tab.close --id tb22 --confirmed true')" ]
 	[ "$(jq -r '.tasks["101"].closed' "$RUN/run.json")" = true ]
 }
 
-@test "close_all_closes_space_last" {
+@test "close_all_closes_only_worker_tabs" {
 	run cls --all
 	[ "$status" -eq 0 ]
-	calls=()
-	while IFS= read -r l; do calls+=("$l"); done < <(stub_calls herdr-app | rg '(tab|space)\.close')
-	[ "${#calls[@]}" -eq 4 ]
-	[[ ${calls[2]} == *"tab.close --id tb5 "* ]]
-	[[ ${calls[3]} == *"space.close --id sp5 "* ]]
-	[ -z "$(stub_calls herdr-app | rg -w 'sp1|tb1' || true)" ]
+	[ "$(stub_calls herdr-app | rg 'tab\.close' | rg -o 'tb[0-9]+' | sort | tr '\n' '|')" = "tb21|tb22|" ]
+	[ -z "$(stub_calls herdr-app | rg -w 'space.close|sp1|tb1' || true)" ]
 	[ -z "$(stub_calls hc | rg -w 't7|t8' || true)" ]
 }
 
@@ -80,14 +76,14 @@ cls() { "$S/close.sh" "$@"; }
 	write_run '{"backend":"herdr-app","tasks":{"101":{"id":"101","hc":"t21","tab":"tb21"}}}'
 	run cls --all
 	[ "$status" -eq 0 ]
-	[ -z "$(stub_calls herdr-app | rg -w 'space.close|tb5|sp5' || true)" ]
+	[ -z "$(stub_calls herdr-app | rg -w 'space.close|tb22' || true)" ]
 }
 
 @test "runs_on_bash_3_2" {
 	run /bin/bash "$S/close.sh" --all
 	[ "$status" -eq 0 ]
 	[ "$(stub_calls hc | rg -c '^kill ')" -eq 2 ]
-	[ -n "$(stub_calls herdr-app | rg 'space.close --id sp5')" ]
+	[ -n "$(stub_calls herdr-app | rg 'tab.close --id tb22')" ]
 }
 
 @test "not_found_with_other_exit_code_is_a_failure" {
@@ -114,7 +110,7 @@ cls() { "$S/close.sh" "$@"; }
 }
 
 @test "close_clears_needs_you" {
-	write_run '{"backend":"herdr-app","space":"sp5","board_tab":"tb5","tasks":{"101":{"id":"101","agent":"smith-101","hc":"t21","tab":"tb21","needs_you":true}}}'
+	write_run '{"backend":"herdr-app","tasks":{"101":{"id":"101","agent":"smith-101","hc":"t21","tab":"tb21","needs_you":true}}}'
 	run cls 101
 	[ "$status" -eq 0 ]
 	[ "$(jq -r '.tasks["101"].closed' "$RUN/run.json")" = true ]

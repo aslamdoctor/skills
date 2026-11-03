@@ -43,6 +43,5 @@
 | A finished worker still shows up in `hc ls --all` under the same name | Finished terminals stay listed with their name until removed. A new `hc run --name` with that name still works and gets a new address | Always address workers by the hc address recorded in `run.json`, never by name. `S/app/close.sh <id>` removes the old terminal (after the user agrees) |
 | Terminal missing from `herdr-app ls` right after `hc run` | The app hasn't placed it yet | spawn.sh retries the lookup. Don't spawn a second copy |
 | Tab id doesn't look like the label | The `herdr.tab` label value is the tab id (`tb…`), not `smith-<id>` | Use the recorded `.tab` from `run.json` |
-| Board tab doesn't show a `main.js` change | An open Board tab doesn't reload the mod | Close the Board tab and create it again (`S/app/preflight.sh`). Confirm with `herdr-app shot` |
-| Board shows no state for a worker | `agents()` doesn't list pane-less hc workers | The mod reads state from `terminals()`. Keep it that way |
+| Worker shows twice in the sidebar (nested under the orchestrator and in another space) | It was placed in a space other than the orchestrator's, so the sidebar lists it under its parent and under that space | spawn.sh puts workers in the orchestrator's space (`orchestrator.space` from preflight). Rerun `S/app/preflight.sh` on older runs |
 | Unsure which hc version works | hc 0.1.16 (herdr-app 0.1.16) is the verified version | Check `hc --version` and test a spawn and a send before a large run on another version |

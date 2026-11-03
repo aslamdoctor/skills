@@ -20,7 +20,7 @@ setup() {
 	git -c user.name=t -c user.email=t@t commit -q --allow-empty -m init
 	git remote add origin "$BATS_TEST_TMPDIR/origin.git"
 	git push -q origin main
-	write_run '{"backend":"herdr-app","space":"sp2","orchestrator":{"address":"t9","kind":"claude-code","space":"sp1"},"tasks":{}}'
+	write_run '{"backend":"herdr-app","orchestrator":{"address":"t9","kind":"claude-code","space":"sp1","tab":"tb1"},"tasks":{}}'
 	stub_reply hc run '{"address":"t21","name":"smith-101","parent":"t9","state":"live","turn":0}'
 	stub_reply hc get.t21 '{"state":"live","status":{"app":"claude-code","state":"working"},"turn":1,"status_ms":5}'
 	stub_reply herdr-app ls '{"spaces":[{"id":"sp2","name":"smith","tabs":[{"id":"tb7","name":"x","terminals":[{"terminal":"t21"}]},{"id":"tb8","name":"y","terminals":[{"terminal":"t30"}]}]}]}'
@@ -109,28 +109,43 @@ hc_run_line() { stub_calls hc | rg '^run ' | head -1; }
 	line=$(hc_run_line)
 	echo "$line" | rg -q -- '--outlive-parent'
 	echo "$line" | rg -q -- '--name smith-101'
-	echo "$line" | rg -q -- '--label herdr.space=sp2'
+	echo "$line" | rg -q -- '--label herdr.space=sp1'
 	echo "$line" | rg -q -- '--label herdr.tab=smith-101'
 	echo "$line" | rg -q -- '--label smith.run=run'
 	echo "$line" | rg -q -- '--label smith.task=101'
 	[ -z "$(echo "$line" | rg -- '--force|--dangerously' || true)" ]
 }
 
-@test "renames_tab_and_selects_orchestrator_space_back" {
+@test "renames_tab_and_selects_orchestrator_tab_back" {
 	run sp 101 b101 origin/main <<<"x"
 	[ "$status" -eq 0 ]
 	calls=$(stub_calls herdr-app)
 	echo "$calls" | rg -q 'do tab.rename --id tb7 --name Smith-101'
 	n_ren=$(echo "$calls" | rg -n 'tab.rename' | head -1 | cut -d: -f1)
-	n_sel=$(echo "$calls" | rg -n 'do space.select --id sp1' | head -1 | cut -d: -f1)
+	n_sel=$(echo "$calls" | rg -n 'do tab.select --id tb1' | head -1 | cut -d: -f1)
 	[ "$n_ren" -lt "$n_sel" ]
+	[ -z "$(echo "$calls" | rg 'space\.' || true)" ]
+}
+
+@test "keeps_parent_link_so_worker_nests_under_orchestrator" {
+	run sp 101 b101 origin/main <<<"x"
+	[ "$status" -eq 0 ]
+	[ -z "$(hc_run_line | rg -- '--no-parent|--parent' || true)" ]
+}
+
+@test "fails_without_orchestrator_space" {
+	write_run '{"backend":"herdr-app","tasks":{}}'
+	run sp 101 b101 origin/main <<<"x"
+	[ "$status" -eq 1 ]
+	echo "$output" | jq -e '.error | test("preflight")' >/dev/null
+	[ -z "$(stub_calls hc | rg '^run ' || true)" ]
 }
 
 @test "records_task" {
 	run sp 101 b101 origin/main <<<"x"
 	[ "$status" -eq 0 ]
 	t=$(jq -c '.tasks["101"]' "$RUN/run.json")
-	echo "$t" | jq -e '.id == "101" and .agent == "smith-101" and .hc == "t21" and .kind == "claude" and .branch == "b101" and .base == "origin/main" and .space == "sp2" and .tab == "tb7" and .needs_you == false and .gate == "started" and (.updated | length > 0) and (.worktree | endswith("/b101"))' >/dev/null
+	echo "$t" | jq -e '.id == "101" and .agent == "smith-101" and .hc == "t21" and .kind == "claude" and .branch == "b101" and .base == "origin/main" and .space == "sp1" and .tab == "tb7" and .needs_you == false and .gate == "started" and (.updated | length > 0) and (.worktree | endswith("/b101"))' >/dev/null
 	[ -d "$WT_ROOT/b101" ]
 	echo "$output" | jq -e '.status == "working" and .hc == "t21"' >/dev/null
 }
@@ -163,7 +178,7 @@ hc_run_line() { stub_calls hc | rg '^run ' | head -1; }
 }
 
 @test "refuses_live_worker_by_recorded_hc" {
-	write_run '{"backend":"herdr-app","space":"sp2","orchestrator":{"address":"t9","kind":"claude-code","space":"sp1"},"tasks":{"101":{"id":"101","hc":"t21"}}}'
+	write_run '{"backend":"herdr-app","orchestrator":{"address":"t9","kind":"claude-code","space":"sp1","tab":"tb1"},"tasks":{"101":{"id":"101","hc":"t21"}}}'
 	run sp 101 b101 origin/main <<<"x"
 	[ "$status" -eq 3 ]
 	echo "$output" | jq -e '.error | test("still live")' >/dev/null
@@ -202,10 +217,10 @@ hc_run_line() { stub_calls hc | rg '^run ' | head -1; }
 }
 
 @test "select_failure_warns" {
-	stub_reply herdr-app do.space.select '{"error":"nope"}' 1
+	stub_reply herdr-app do.tab.select '{"error":"nope"}' 1
 	run sp 101 b101 origin/main <<<"x"
 	[ "$status" -eq 0 ]
-	echo "$output" | tail -1 | jq -e '.warnings | length == 1 and (.[0] | test("space.select sp1 failed"))' >/dev/null
+	echo "$output" | tail -1 | jq -e '.warnings | length == 1 and (.[0] | test("tab.select tb1 failed"))' >/dev/null
 }
 
 @test "turn_above_zero_with_idle_reports_working" {
@@ -230,7 +245,7 @@ hc_run_line() { stub_calls hc | rg '^run ' | head -1; }
 }
 
 @test "respawn_resets_reported_and_gate_sent" {
-	write_run '{"backend":"herdr-app","space":"sp2","orchestrator":{"address":"t9","kind":"claude-code","space":"sp1"},"tasks":{"101":{"id":"101","hc":"t5","gate":"spec","gate_sent":false,"reported":{"stopped":5,"gone":true}}}}'
+	write_run '{"backend":"herdr-app","orchestrator":{"address":"t9","kind":"claude-code","space":"sp1","tab":"tb1"},"tasks":{"101":{"id":"101","hc":"t5","gate":"spec","gate_sent":false,"reported":{"stopped":5,"gone":true}}}}'
 	stub_reply hc get.t5 '{"state":"finished"}'
 	run sp 101 b101 origin/main <<<"x"
 	[ "$status" -eq 0 ]
@@ -238,7 +253,7 @@ hc_run_line() { stub_calls hc | rg '^run ' | head -1; }
 }
 
 @test "respawn_clears_closed" {
-	write_run '{"backend":"herdr-app","space":"sp2","orchestrator":{"address":"t9","kind":"claude-code","space":"sp1"},"tasks":{"101":{"id":"101","hc":"t5","gate":"pr","closed":true}}}'
+	write_run '{"backend":"herdr-app","orchestrator":{"address":"t9","kind":"claude-code","space":"sp1","tab":"tb1"},"tasks":{"101":{"id":"101","hc":"t5","gate":"pr","closed":true}}}'
 	stub_reply hc get.t5 '{"error":"not_found"}' 3
 	run sp 101 b101 origin/main <<<"x"
 	[ "$status" -eq 0 ]

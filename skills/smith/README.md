@@ -18,7 +18,7 @@ You tell your agent which issues to work on. It becomes the orchestrator: each t
 - A run is saved to `~/.smith/runs/`. Workers can be restarted later in their original conversation, for example to handle review comments the next day.
 - A task that depends on another task's unmerged branch is cut from that branch and shipped as a stacked PR.
 - Base branch, branch naming, commit format, ship flow and test commands come from the repo's instruction files (AGENTS.md, CLAUDE.md and similar). You confirm them once per run.
-- In the Herdr app, a run gets its own space with a Board tab (the `smith-board` mod) that lists every worker with its gate, and puts the ones waiting on you at the top. Gate messages are typed straight into the orchestrator's terminal.
+- In the Herdr app, workers open as tabs in the orchestrator's space and show up once in the sidebar, nested under the orchestrator. Gate messages are typed straight into the orchestrator's terminal.
 
 ## Requirements
 
@@ -100,7 +100,6 @@ scripts/watch.sh         wait until a worker needs the orchestrator, then report
 scripts/board.sh         status table for the whole run (both backends)
 scripts/agents.tsv       per-agent integration, resume arguments and transcript paths
 scripts/app/             Herdr app versions: preflight, spawn, send, watch, close, launch.tsv
-app/smith-board/         Herdr app mod that draws the run's Board tab
 ```
 
 Each run keeps its state in `~/.smith/runs/<repo>-<date>/` (`<repo>-<date>-app/` for the Herdr app): `run.json` holds one record per task (branch, worktree, tab, pane, agent kind, session ID, gate, PR), and `gates/<id>.md` is the gate log.

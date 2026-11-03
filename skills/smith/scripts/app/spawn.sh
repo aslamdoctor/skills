@@ -93,8 +93,11 @@ for w in "${words[@]}"; do
 	esac
 done
 
-space=$(jq -r '.space // empty' "$RUN/run.json")
-orch_space=$(jq -r '.orchestrator.space // empty' "$RUN/run.json")
+# Workers open in the orchestrator's space. hc makes the orchestrator their parent, so the sidebar
+# shows each worker once, nested under it.
+space=$(jq -r '.orchestrator.space // empty' "$RUN/run.json")
+orch_tab=$(jq -r '.orchestrator.tab // empty' "$RUN/run.json")
+[ -n "$space" ] || { echo '{"error":"no orchestrator space in run.json, run preflight.sh first"}'; exit 1; }
 
 # 5. Start the worker.
 out=$(hc run --bg --json --outlive-parent --name "$agent" --cwd "$wt" \
@@ -117,10 +120,10 @@ if [ -z "$tab" ]; then
 elif ! rn=$(app_do tab.rename --id "$tab" --name "$(worker_label "$id")" 2>&1); then
 	warn "tab.rename failed for $tab: $rn"
 fi
-if [ -z "$orch_space" ]; then
-	warn "no orchestrator space recorded; focus was not handed back"
-elif ! sel=$(app_do space.select --id "$orch_space" 2>&1); then
-	warn "space.select $orch_space failed, focus may still be on the worker: $sel"
+if [ -z "$orch_tab" ]; then
+	warn "no orchestrator tab recorded; focus was not handed back"
+elif ! sel=$(app_do tab.select --id "$orch_tab" 2>&1); then
+	warn "tab.select $orch_tab failed, focus may still be on the worker: $sel"
 fi
 
 # 7. Confirm the kickoff arrived (it is the agent's own argv, so look at its state).

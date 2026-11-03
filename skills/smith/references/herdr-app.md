@@ -20,7 +20,7 @@ Workers launch with `--outlive-parent`, the default model and the default permis
 
 1. Detect the backend (SKILL.md § 0). If both Herdr TUI and the Herdr app are present, ask the user once which to use.
 2. Choose the run directory: `RUN=~/.smith/runs/<repo>-<YYYY-MM-DD>-app`. Reuse it if it exists for today. It holds `run.json` (one record per task, with `"backend": "herdr-app"`) and `gates/<id>.md` (the gate log).
-3. Run `RUN=<run> S/app/preflight.sh`. It records the orchestrator, links the `smith-board` mod, and creates or reuses the run's space (`smith <repo> <date>`) and its Board tab. It prints `run.json` minus the tasks as one JSON line, or `{"error": ...}` and exit 1.
+3. Run `RUN=<run> S/app/preflight.sh`. It records the orchestrator (address, kind, space and tab). Workers open as tabs in that space and show once in the sidebar, nested under the orchestrator. It prints `run.json` minus the tasks as one JSON line, or `{"error": ...}` and exit 1.
 4. Pick the worker kind (or kinds) with the user. The default is `claude`. See § Agent support.
 
 ## Spawn
@@ -36,7 +36,7 @@ The kickoff is the **Kickoff** prompt from `references/prompts.md` (with the gat
 - starts the worker with `hc run`, the name `smith-<id>`, `--outlive-parent` and the label `smith.run=<basename of RUN>`
 - names the tab `Smith-<id>` and records its id as `.tab` (the `herdr.tab` label value becomes the tab id, and scripts use the recorded one)
 - retries the terminal lookup, because a terminal can be missing from `herdr-app ls` right after `hc run`
-- selects the orchestrator's space again, so focus doesn't move
+- selects the orchestrator's tab again, so focus doesn't move
 - confirms delivery from state (`working`, `blocked`, or `turn > 0` within 60 s) and prints the task record plus its status
 - refuses to respawn a live worker (exit 3): adopt it and use send.sh
 
@@ -81,18 +81,16 @@ Workers stop at each gate and ask in plain text. The kickoff tells them this.
 
 ## Board
 
-The run's Board tab shows every task live. In chat, `RUN=<run> S/board.sh` prints the same status table from `run.json` and the live states.
-
-After editing the mod in `app/smith-board/`, run `herdr-app check <mod folder>` and confirm with `herdr-app shot`.
+`RUN=<run> S/board.sh` prints a status table from `run.json` and the live states. The Herdr sidebar lists each worker under the orchestrator with its current state.
 
 ## Wrap up
 
-- Ask the user first. Then run `RUN=<run> S/app/close.sh <id>...`, or `--all` to also close the Board tab and the run's space.
+- Ask the user first. Then run `RUN=<run> S/app/close.sh <id>...`, or `--all` for every task in the run.
 - close.sh kills and removes each task's terminal, closes its tab and marks the task closed. It only touches ids recorded in `run.json`, and it keeps worktrees, branches and `run.json`.
 - Exit codes: 0 all went well, 1 something other than "already gone" failed (a warning is on stderr and the other tasks still run), 2 usage error or unknown task id (nothing touched).
 - Stop the detached watcher this run started, by its recorded pid only: `kill "$(cat <run>/watch.pid)"`, then `rm <run>/watch.pid`. Skip it if the file is missing or the process has already exited. A background-task watcher needs no kill.
 - When everything has merged, offer to remove the worktrees (`git worktree remove <path>`), delete the local branches and archive the run directory.
-- Never touch spaces, tabs, terminals or mods the run didn't create. Never stop the app or the core.
+- Never touch spaces, tabs or terminals the run didn't create. Never stop the app or the core.
 
 ## Resume
 
