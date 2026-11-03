@@ -1,5 +1,7 @@
 # Skills
 
+[![HOL Guard](https://img.shields.io/endpoint?url=https%3A%2F%2Fhol.org%2Fapi%2Fregistry%2Fbadges%2Fplugin%3Fslug%3Daslamdoctor%252Fskills%26metric%3Drelease)](https://hol.org/registry/plugins/aslamdoctor%2Fskills?utm_source=hol_marketplace&utm_medium=plugins_badge&utm_campaign=plugins&utm_content=aslamdoctor%2Fskills&ref=plugin-author-054748b3)
+
 Agent skills I use day to day. Each one is a folder with a `SKILL.md`, in the [Agent Skills](https://agentskills.io) format, so they work with Claude Code, Codex, OpenCode, Pi and other agents that read skill folders.
 
 ## Skills
