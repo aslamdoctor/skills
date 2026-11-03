@@ -50,7 +50,7 @@ st() { printf '{"state":"live","turn":%s,"status":{"app":"claude-code","state":"
 	stub_reply hc get.t21 "$(st blocked)"
 	run snd 101 "go"
 	[ "$status" -eq 1 ]
-	[ "$output" = "NOT DELIVERED: 😎 SMITH-101 is blocked on a dialog; read it first" ]
+	[ "$output" = "NOT DELIVERED: 🤓 smith-101 is blocked on a dialog; read it first" ]
 	[ -z "$(stub_calls hc | rg '^send ' || true)" ]
 }
 

@@ -10,7 +10,7 @@ setup() {
 	export S="$REPO_ROOT/skills/smith/scripts/app"
 	write_run '{"backend":"herdr-app","orchestrator":{"address":"t7","space":"sp1","tab":"tb1"},"tasks":{"101":{"id":"101","agent":"smith-101","hc":"t21","tab":"tb21","worktree":"/wt/101"},"102":{"id":"102","agent":"smith-102","hc":"t22","tab":"tb22","worktree":"/wt/102"}}}'
 	# The user's terminals t7/t8 and the run's worker tabs share space sp1.
-	stub_reply herdr-app ls '{"spaces":[{"id":"sp1","name":"mine","tabs":[{"id":"tb1","name":"x","terminals":[{"terminal":"t7"},{"terminal":"t8"}]},{"id":"tb21","name":"😎 SMITH-101","terminals":[{"terminal":"t21"}]},{"id":"tb22","name":"😎 SMITH-102","terminals":[{"terminal":"t22"}]}]}]}'
+	stub_reply herdr-app ls '{"spaces":[{"id":"sp1","name":"mine","tabs":[{"id":"tb1","name":"x","terminals":[{"terminal":"t7"},{"terminal":"t8"}]},{"id":"tb21","name":"🤓 smith-101","terminals":[{"terminal":"t21"}]},{"id":"tb22","name":"🤓 smith-102","terminals":[{"terminal":"t22"}]}]}]}'
 }
 
 cls() { "$S/close.sh" "$@"; }

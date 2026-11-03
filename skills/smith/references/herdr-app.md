@@ -1,6 +1,6 @@
 # Herdr app backend
 
-Use this file when smith runs inside the Herdr app (`HC_TERMINAL_ID` is set and `hc server status` succeeds). SKILL.md points at its sections as "§ <name>". `S` means this skill's `scripts/` directory. Every script needs the `RUN` env var. Workers are `hc` terminals: the worker for task 101 is named `smith-101` (hc name) and shown as `😎 SMITH-101` (tab and display name); messages show the address as `🤓 smith-101`. Verified with hc 0.1.16 (herdr-app 0.1.16).
+Use this file when smith runs inside the Herdr app (`HC_TERMINAL_ID` is set and `hc server status` succeeds). SKILL.md points at its sections as "§ <name>". `S` means this skill's `scripts/` directory. Every script needs the `RUN` env var. Workers are `hc` terminals: the worker for task 101 is named `smith-101` (hc name) and shown as `🤓 smith-101` (tab and display name); messages show the address as `🤓 smith-101`. Verified with hc 0.1.16 (herdr-app 0.1.16).
 
 Smith posts no toasts on this backend. Herdr's own toasts are the only ones.
 
@@ -20,7 +20,7 @@ Workers launch with `--outlive-parent`, the default model and the default permis
 
 1. Detect the backend (SKILL.md § 0). If both Herdr TUI and the Herdr app are present, ask the user once which to use.
 2. Choose the run directory: `RUN=~/.smith/runs/<repo>-<YYYY-MM-DD>-app`. Reuse it if it exists for today. It holds `run.json` (one record per task, with `"backend": "herdr-app"`) and `gates/<id>.md` (the gate log).
-3. Run `RUN=<run> S/app/preflight.sh`. It records the orchestrator (address, kind, space and tab). Workers open as tabs in that space and show once in the sidebar, nested under the orchestrator. It prints `run.json` minus the tasks as one JSON line, or `{"error": ...}` and exit 1.
+3. Run `RUN=<run> S/app/preflight.sh`. It records the orchestrator (address, kind, space and tab) and renames the orchestrator's tab to `😎 SMITH`. Workers open as tabs in that space and show once in the sidebar, nested under the orchestrator. It prints `run.json` minus the tasks as one JSON line, or `{"error": ...}` and exit 1.
 4. Pick the worker kind (or kinds) with the user. The default is `claude`. See § Agent support.
 
 ## Spawn
@@ -34,7 +34,7 @@ EOF
 The kickoff is the **Kickoff** prompt from `references/prompts.md` (with the gate instruction). It becomes the agent's own first prompt, so nothing is sent afterwards. spawn.sh:
 - creates or reuses the worktree
 - starts the worker with `hc run`, the name `smith-<id>`, `--outlive-parent` and the label `smith.run=<basename of RUN>`
-- names the tab `😎 SMITH-<id>` and records its id as `.tab` (the `herdr.tab` label value becomes the tab id, and scripts use the recorded one)
+- names the tab `🤓 smith-<id>` and records its id as `.tab` (the `herdr.tab` label value becomes the tab id, and scripts use the recorded one)
 - retries the terminal lookup, because a terminal can be missing from `herdr-app ls` right after `hc run`
 - selects the orchestrator's tab again, so focus doesn't move
 - confirms delivery from state (`working`, `blocked`, or `turn > 0` within 60 s) and prints the task record plus its status
@@ -55,7 +55,7 @@ Arm one watcher per run, after every prompt that starts work. Choose the mode fr
 
 In background-task mode the watcher exits after printing a report, so re-arm it after each report. In both modes it exits with "no live workers" once every task is closed, or gone and already reported.
 
-Gate messages and hc notes arrive as typed messages: `[smith] GATE <gate> 😎 SMITH-<id>: <status> | <ref>` (sent by mark.sh) and `<hc>` notes (hc's own reports for child workers). The watcher reports the rest:
+Gate messages and hc notes arrive as typed messages: `[smith] GATE <gate> 🤓 smith-<id>: <status> | <ref>` (sent by mark.sh) and `<hc>` notes (hc's own reports for child workers). The watcher reports the rest:
 - **GATE:** mark.sh could not reach the orchestrator, so the gate line is only in the log.
 - **GONE:** the worker disappeared.
 - **BLOCKED:** a dialog that stays up for 5 seconds or more.

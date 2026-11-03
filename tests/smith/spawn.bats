@@ -120,7 +120,7 @@ hc_run_line() { stub_calls hc | rg '^run ' | head -1; }
 	run sp 101 b101 origin/main <<<"x"
 	[ "$status" -eq 0 ]
 	calls=$(stub_calls herdr-app)
-	echo "$calls" | rg -q 'do tab.rename --id tb7 --name .*SMITH-101'
+	echo "$calls" | rg -q 'do tab.rename --id tb7 --name .*smith-101'
 	n_ren=$(echo "$calls" | rg -n 'tab.rename' | head -1 | cut -d: -f1)
 	n_sel=$(echo "$calls" | rg -n 'do tab.select --id tb1' | head -1 | cut -d: -f1)
 	[ "$n_ren" -lt "$n_sel" ]

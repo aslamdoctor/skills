@@ -16,13 +16,13 @@ mk() { "$S/mark.sh" "$@"; }
 @test "app_sends_exact_gate_message" {
 	run mk 101 spec "Spec ready" docs/spec.md
 	[ "$status" -eq 0 ]
-	[ "$output" = "marked 😎 SMITH-101: spec" ]
+	[ "$output" = "marked 🤓 smith-101: spec" ]
 	[ "$(stub_calls hc | rg '^send ' | wc -l | tr -d ' ')" -eq 1 ]
 	line=$(stub_calls hc | rg '^send ')
 	eval "set -- $line"
 	[ "$1" = send ]
 	[ "$2" = t9 ]
-	[ "$3" = "[smith] GATE spec 😎 SMITH-101: Spec ready | docs/spec.md" ]
+	[ "$3" = "[smith] GATE spec 🤓 smith-101: Spec ready | docs/spec.md" ]
 	[ "$#" -eq 3 ]
 	[ "$(jq -r '.tasks["101"].gate_sent' "$RUN/run.json")" = true ]
 }
@@ -37,7 +37,7 @@ mk() { "$S/mark.sh" "$@"; }
 	stub_reply hc send '{}' 1
 	run mk 101 pr "PR open" https://github.com/o/r/pull/5
 	[ "$status" -eq 0 ]
-	[ "$output" = "marked 😎 SMITH-101: pr (orchestrator not reached; the watcher will report it)" ]
+	[ "$output" = "marked 🤓 smith-101: pr (orchestrator not reached; the watcher will report it)" ]
 	[ "$(jq -r '.tasks["101"].gate_sent' "$RUN/run.json")" = false ]
 	[ "$(jq -r '.tasks["101"].pr' "$RUN/run.json")" = "https://github.com/o/r/pull/5" ]
 }
@@ -55,7 +55,7 @@ mk() { "$S/mark.sh" "$@"; }
 	stub_reply hc label '{}' 1
 	run --separate-stderr mk 101 spec "x" ref
 	[ "$status" -eq 0 ]
-	[[ $stderr == *"hc label failed for 😎 SMITH-101; gate still recorded"* ]]
+	[[ $stderr == *"hc label failed for 🤓 smith-101; gate still recorded"* ]]
 	[ "$(jq -r '.tasks["101"].gate' "$RUN/run.json")" = spec ]
 	[ "$(jq -r '.tasks["101"].gate_sent' "$RUN/run.json")" = true ]
 }
@@ -85,7 +85,7 @@ mk() { "$S/mark.sh" "$@"; }
 @test "tui_output_unchanged" {
 	write_run '{"space":"sp2","tasks":{"101":{"id":"101","agent":"smith-101","pane":"p1"}}}'
 	run mk 101 spec "x" ref
-	[ "$output" = "marked 😎 SMITH-101: spec" ]
+	[ "$output" = "marked 🤓 smith-101: spec" ]
 }
 
 @test "app_send_watchdog_kills_hung_send" {
@@ -95,7 +95,7 @@ mk() { "$S/mark.sh" "$@"; }
 	MARK_SEND_TIMEOUT=1 run --separate-stderr mk 101 spec "x" ref
 	[ $((SECONDS - start)) -lt 5 ]
 	[ "$status" -eq 0 ]
-	[ "$output" = "marked 😎 SMITH-101: spec (orchestrator not reached; the watcher will report it)" ]
+	[ "$output" = "marked 🤓 smith-101: spec (orchestrator not reached; the watcher will report it)" ]
 	[ -z "$stderr" ]
 	[ "$(jq -r '.tasks["101"].gate_sent' "$RUN/run.json")" = false ]
 	[ "$(jq -r '.tasks["101"].needs_you' "$RUN/run.json")" = true ]

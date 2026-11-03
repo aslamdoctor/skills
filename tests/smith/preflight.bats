@@ -43,10 +43,23 @@ pre() { "$S/app/preflight.sh" "$@"; }
 	echo "$output" | jq -e '.backend == "herdr-app" and (has("tasks") | not)' >/dev/null
 }
 
+@test "renames_orchestrator_tab" {
+	run pre
+	[ "$status" -eq 0 ]
+	stub_calls herdr-app | rg -q 'do tab.rename --id tb1 --name .*SMITH'
+}
+
+@test "rename_failure_does_not_fail_preflight" {
+	stub_reply herdr-app do.tab.rename '{"error":"nope"}' 1
+	run pre
+	[ "$status" -eq 0 ]
+	[ "$(jq -r .orchestrator.tab "$RUN/run.json")" = tb1 ]
+}
+
 @test "creates_no_space_tab_or_mod" {
 	run pre
 	[ "$status" -eq 0 ]
-	[ -z "$(stub_calls herdr-app || true)" ]
+	[ -z "$(stub_calls herdr-app | rg -v 'tab.rename' || true)" ]
 	[ ! -e "$HOME/.config/herdr-app/mods" ]
 }
 

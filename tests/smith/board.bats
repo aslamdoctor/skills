@@ -10,8 +10,8 @@ board() { "$S/board.sh"; }
 	run board
 	[ "$status" -eq 0 ]
 	[ "${lines[0]}" = "| Task | Worker | Kind | Gate | Status | PR |" ]
-	[ "${lines[2]}" = "| #101 | 😎 SMITH-101 (blocked) | claude | spec | ready / two | u1 |" ]
-	[ "${lines[3]}" = "| #102 | 😎 SMITH-102 (gone) | agy |  |  |  |" ]
+	[ "${lines[2]}" = "| #101 | 🤓 smith-101 (blocked) | claude | spec | ready / two | u1 |" ]
+	[ "${lines[3]}" = "| #102 | 🤓 smith-102 (gone) | agy |  |  |  |" ]
 	[ -z "$(stub_calls herdr)" ]
 }
 
@@ -22,7 +22,7 @@ board() { "$S/board.sh"; }
 	[ "$status" -eq 0 ]
 	[ "$output" = "| Task | Worker | Kind | Gate | Status | PR |
 |---|---|---|---|---|---|
-| #101 | 😎 SMITH-101 (working) | claude | ready / two | u1 |  |
-| #102 | 😎 SMITH-102 (alive) | custom | pr | x |  |" ]
+| #101 | 🤓 smith-101 (working) | claude | ready / two | u1 |  |
+| #102 | 🤓 smith-102 (alive) | custom | pr | x |  |" ]
 	[ -z "$(stub_calls hc)" ]
 }
