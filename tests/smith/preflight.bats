@@ -46,7 +46,7 @@ pre() { "$S/app/preflight.sh" "$@"; }
 @test "renames_orchestrator_tab" {
 	run pre
 	[ "$status" -eq 0 ]
-	stub_calls herdr-app | rg -q 'do tab.rename --id tb1 --name .*SMITH'
+	stub_calls herdr-app | rg -q 'do tab.rename --id tb1 --name .*SMITH-t9'
 }
 
 @test "rename_failure_does_not_fail_preflight" {

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # herdr-app preflight. Usage: RUN=<run dir> preflight.sh [--resume]
 # Records the backend and the orchestrator (address, kind, space, tab). Workers open as tabs in the
-# orchestrator's space and show nested under it in the sidebar. Renames the orchestrator's tab to "😎 SMITH".
+# orchestrator's space and show nested under it in the sidebar. Renames the orchestrator's tab to "😎 SMITH-<address>".
 # Prints run.json minus tasks as one JSON line.
 set -euo pipefail
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
@@ -34,7 +34,7 @@ if [ "$resume" = 1 ] || [ -z "$recorded" ] || [ "$recorded" = "$HC_TERMINAL_ID" 
 fi
 
 # Best effort: a failed rename only leaves the tab's old name.
-if [ -n "$orch_tab" ] && ! rn=$(herdr-app do tab.rename --id "$orch_tab" --name "$(orch_label)" 2>&1); then
+if [ -n "$orch_tab" ] && ! rn=$(herdr-app do tab.rename --id "$orch_tab" --name "$(orch_label "$HC_TERMINAL_ID")" 2>&1); then
 	echo "preflight.sh: tab.rename failed for $orch_tab: $rn" >&2
 fi
 

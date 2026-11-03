@@ -20,7 +20,7 @@ Workers launch with `--outlive-parent`, the default model and the default permis
 
 1. Detect the backend (SKILL.md § 0). If both Herdr TUI and the Herdr app are present, ask the user once which to use.
 2. Choose the run directory: `RUN=~/.smith/runs/<repo>-<YYYY-MM-DD>-app`. Reuse it if it exists for today. It holds `run.json` (one record per task, with `"backend": "herdr-app"`) and `gates/<id>.md` (the gate log).
-3. Run `RUN=<run> S/app/preflight.sh`. It records the orchestrator (address, kind, space and tab) and renames the orchestrator's tab to `😎 SMITH`. Workers open as tabs in that space and show once in the sidebar, nested under the orchestrator. It prints `run.json` minus the tasks as one JSON line, or `{"error": ...}` and exit 1.
+3. Run `RUN=<run> S/app/preflight.sh`. It records the orchestrator (address, kind, space and tab) and renames the orchestrator's tab to `😎 SMITH-<address>` (its hc address, e.g. `😎 SMITH-t7`). Workers open as tabs in that space and show once in the sidebar, nested under the orchestrator. It prints `run.json` minus the tasks as one JSON line, or `{"error": ...}` and exit 1.
 4. Pick the worker kind (or kinds) with the user. The default is `claude`. See § Agent support.
 
 ## Spawn
