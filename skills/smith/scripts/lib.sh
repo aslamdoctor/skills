@@ -24,8 +24,10 @@ task_field() { jq -r --arg id "$1" ".tasks[\$id].$2 // empty" "$RUN/run.json"; }
 
 # Workers are Smith's copies, named after their task. Herdr agent names must be lowercase
 # (a-z, 0-9, '-', '_', max 32), so smith-<id> is the address and Smith-<id> is what people see.
-new_agent_name() { local n; n=$(printf 'smith-%s' "$1" | tr 'A-Z' 'a-z' | tr -c 'a-z0-9_-' '-'); echo "${n:0:32}"; }
-worker_label() { echo "Smith-$1"; }
+# A PR URL (a PR in another repo) shortens to <repo>-<number>, so two URLs don't truncate to the same name.
+short_id() { if [[ $1 =~ ^https?://[^/]+/[^/]+/([^/]+)/pull/([0-9]+) ]]; then echo "${BASH_REMATCH[1]}-${BASH_REMATCH[2]}"; else echo "$1"; fi; }
+new_agent_name() { local n; n=$(printf 'smith-%s' "$(short_id "$1")" | tr 'A-Z' 'a-z' | tr -c 'a-z0-9_-' '-'); echo "${n:0:32}"; }
+worker_label() { echo "Smith-$(short_id "$1")"; }
 # The address recorded in run.json, so runs from before the rename (i<id>) keep working.
 worker_agent() { local a; a=$(task_field "$1" agent); echo "${a:-$(new_agent_name "$1")}"; }
 
