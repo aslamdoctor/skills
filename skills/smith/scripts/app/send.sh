@@ -19,7 +19,7 @@ interval=${SEND_INTERVAL:-1}
 polls() { awk -v w="$1" -v i="$interval" 'BEGIN { n = int(w / i + 0.5); print (n < 1 ? 1 : n) }'; }
 
 # Baseline for watch.sh: a gate the worker marks before its watcher starts still counts as new.
-log="$RUN/gates/$id.md"
+log=$(gate_log "$id")
 lines=$(if [ -f "$log" ]; then wc -l <"$log" | tr -d ' '; else echo 0; fi)
 run_update '.tasks[$id].gate_lines = ($n | tonumber)' --arg id "$id" --arg n "$lines"
 # needs_you is cleared only once the message went out (exit 0 or 2), so a failed send leaves it set.

@@ -7,7 +7,7 @@ set -uo pipefail
 . "$(dirname "$0")/lib.sh"
 
 id=$1; gate=$2; text=$3; ref=${4:-}
-echo "GATE $gate | $text | $ref" >>"$RUN/gates/$id.md"
+echo "GATE $gate | $text | $ref" >>"$(gate_log "$id")"
 
 pr=""
 [[ $ref == *"/pull/"* ]] && pr=$ref

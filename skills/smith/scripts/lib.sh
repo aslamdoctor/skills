@@ -31,6 +31,9 @@ short_id() { if [[ $1 =~ ^https?://[^/]+/[^/]+/([^/]+)/pull/([0-9]+) ]]; then ec
 new_agent_name() { local n; n=$(printf 'smith-%s' "$(short_id "$1")" | tr 'A-Z' 'a-z' | tr -c 'a-z0-9_-' '-'); echo "${n:0:32}"; }
 worker_label() { echo "🤓 smith-$(short_id "$1")"; }
 agent_display() { echo "🤓 $1"; }
+# Task ids can be PR URLs, so any file named after a task uses file_key (no slashes).
+file_key() { short_id "$1" | tr '/' '-'; }
+gate_log() { echo "$RUN/gates/$(file_key "$1").md"; }
 orch_label() { echo "😎 SMITH-$1"; }
 # The address recorded in run.json, so runs from before the rename (i<id>) keep working.
 worker_agent() { local a; a=$(task_field "$1" agent); echo "${a:-$(new_agent_name "$1")}"; }

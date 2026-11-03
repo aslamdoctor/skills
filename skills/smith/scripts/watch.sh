@@ -25,7 +25,7 @@ while [ $# -gt 0 ]; do
 	esac
 done
 grace_ms=$((grace_min * 60000))
-agent=$(worker_agent "$id"); name=$(worker_label "$id"); log="$RUN/gates/$id.md"
+agent=$(worker_agent "$id"); name=$(worker_label "$id"); log=$(gate_log "$id")
 kind=$(task_field "$id" kind); pane=$(task_field "$id" pane)
 
 count_lines() { if [ -f "$log" ]; then wc -l <"$log" | tr -d ' '; else echo 0; fi; }

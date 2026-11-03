@@ -96,12 +96,12 @@ fetch_task() {
 			(.status_ms // 0), (.turn // 0), (.parent // "-")] | map(tostring) | join(" ")' <<<"$out" 2>/dev/null) && [ -n "$f" ]; then
 		read -r state sms turn parent <<<"$f"
 		[ "$parent" = "-" ] && parent=""
-		printf '%s' "$parent" >"$tmp/parent/$id"
+		printf '%s' "$parent" >"$tmp/parent/$(file_key "$id")"
 		return 0
 	fi
 	# hc prints {"error":{"kind":"not_found"}} (exit 3) for a terminal that was removed.
 	if [ "$(jq -r '.error.kind // empty' <<<"$out" 2>/dev/null)" = not_found ]; then
-		state=gone; sms=0; turn=0; parent=$(cat "$tmp/parent/$id" 2>/dev/null || true)
+		state=gone; sms=0; turn=0; parent=$(cat "$tmp/parent/$(file_key "$id")" 2>/dev/null || true)
 		return 0
 	fi
 	return 1
@@ -124,13 +124,15 @@ printed=0
 # report <what> <id> <state> <status_ms>. Default mode prints. --notify queues the report; flush_queue
 # sends it, so a refused send never stops the other tasks from being checked.
 report() {
-	local what=$1 id=$2 state=$3 ms=$4 line text q="$tmp/q/$2.$1" first=0 last=0
-	line=$(tail -1 "$RUN/gates/$id.md" 2>/dev/null) || true
+	local what=$1 id=$2 state=$3 ms=$4 line text q first=0 last=0
+	# Queue file <file_key>.<what>; the real id is stored inside, since a URL id can't be a file name.
+	q="$tmp/q/$(file_key "$id").$what"
+	line=$(tail -1 "$(gate_log "$id")" 2>/dev/null) || true
 	text="[smith] $what $(worker_label "$id") ($state): ${line:-no gate line yet}. RUN=$RUN"
 	if [ "$notify" = 1 ]; then
 		# Already pending: refresh the text, keep its timing so the cap still counts from the first try.
 		if [ -f "$q" ]; then { read -r first; read -r last; } <"$q"; else first=$(date +%s); fi
-		printf '%s\n%s\n%s\n%s\n' "$first" "$last" "$ms" "$text" >"$q"
+		printf '%s\n%s\n%s\n%s\n%s\n' "$first" "$last" "$ms" "$id" "$text" >"$q"
 	else
 		echo "$text"; printed=1
 		finish "$what" "$id" "$ms"
@@ -143,8 +145,8 @@ flush_queue() {
 	orch=$(jq -r '.orchestrator.address // empty' "$RUN/run.json" 2>/dev/null)
 	for q in "$tmp"/q/*; do
 		[ -f "$q" ] || continue
-		name=${q##*/}; id=${name%%.*}; what=${name#*.}
-		{ read -r first; read -r last; read -r ms; IFS= read -r text; } <"$q"
+		name=${q##*/}; what=${name##*.}
+		{ read -r first; read -r last; read -r ms; IFS= read -r id; IFS= read -r text; } <"$q"
 		now=$(date +%s)
 		[ $((now - last)) -ge "$retry" ] || continue
 		if [ -n "$orch" ] && send_bounded "${SMITH_SEND_TIMEOUT:-60}" "$orch" "$text"; then
@@ -153,7 +155,7 @@ flush_queue() {
 			echo "watch.sh: dropped report for $(worker_label "$id"): $what" >&2
 			finish "$what" "$id" "$ms"; rm -f "$q"
 		else
-			printf '%s\n%s\n%s\n%s\n' "$first" "$now" "$ms" "$text" >"$q"
+			printf '%s\n%s\n%s\n%s\n%s\n' "$first" "$now" "$ms" "$id" "$text" >"$q"
 		fi
 	done
 }
@@ -168,7 +170,7 @@ check_tasks() {
 			(.reported.gone // false), (.reported.blocked // 0), (.reported.stopped // 0)] | map(tostring) | join(" ")' "$RUN/run.json") || return 1
 		read -r closed dropped glines r_gone r_blocked r_stopped <<<"$f"
 		[ "$closed" = true ] && continue
-		hc=$(worker_hc "$id"); log="$RUN/gates/$id.md"
+		hc=$(worker_hc "$id"); log=$(gate_log "$id")
 		# Unknown answer: keep the task live, decide nothing this pass.
 		if ! fetch_task "$id" "$hc"; then live=$((live + 1)); continue; fi
 

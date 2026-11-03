@@ -13,7 +13,7 @@ if [ $# -ge 2 ]; then msg=$2; else msg=$(cat); fi
 agent=$(worker_agent "$id"); kind=$(task_field "$id" kind); pane=$(task_field "$id" pane)
 
 # Baseline for watch.sh: a gate the worker marks before its watcher starts still counts as new.
-log="$RUN/gates/$id.md"
+log=$(gate_log "$id")
 lines=$(if [ -f "$log" ]; then wc -l <"$log" | tr -d ' '; else echo 0; fi)
 run_update '.tasks[$id].gate_lines = ($n | tonumber)' --arg id "$id" --arg n "$lines"
 
