@@ -1,6 +1,6 @@
 # Herdr backend
 
-Use this file when smith runs inside a Herdr pane (`HERDR_ENV=1`). SKILL.md points at its sections as "§ <name>". `S` means this skill's `scripts/` directory. Every script needs the `RUN` env var. Herdr agent names are lowercase, so the worker for task 101 is `smith-101` (its label is `Smith-101`). Scripts read the name from `run.json`, so older runs with `i<id>` workers keep working.
+Use this file when smith runs inside a Herdr pane (`HERDR_ENV=1`). SKILL.md points at its sections as "§ <name>". `S` means this skill's `scripts/` directory. Every script needs the `RUN` env var. Herdr agent names are lowercase, so the worker for task 101 is `smith-101` (its label is `😎 SMITH-101`, and messages show the address as `🤓 smith-101`). Scripts read the name from `run.json`, so older runs with `i<id>` workers keep working.
 
 ## Agent support
 
@@ -33,7 +33,7 @@ spawn.sh:
 - creates or reuses the worktree
 - opens a background tab and starts the worker `smith-<id>`
 - records the task in `run.json` (kind, pane, tab, session ID if one is reported)
-- labels the tab and pane `Smith-<id>` in the sidebar
+- labels the tab and pane `😎 SMITH-<id>` in the sidebar
 - prints the task record
 
 If the status isn't `idle`, read the screen. New worktree paths often bring up a first-run dialog (folder trust, login, model picker). Bring it to the user before answering it.

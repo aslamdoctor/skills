@@ -7,7 +7,7 @@ description: Orchestrate several coding tasks or PR reviews in parallel from one
 
 This session is the orchestrator. It never writes task code itself. It creates workers, sends them prompts, watches them, and brings their questions to the user. Workers do the work in their own worktree and tab.
 
-Workers are Smith's copies, named after their task: the worker for task 101 is `Smith-101` in the sidebar, toasts and reports.
+Workers are Smith's copies, named after their task: the worker for task 101 is `😎 SMITH-101` in the sidebar, toasts and reports.
 
 Prompt templates are in `references/prompts.md`. Backend-specific steps are in `references/<backend>.md`; this file points at their sections as "`references/<backend>.md` § <name>".
 

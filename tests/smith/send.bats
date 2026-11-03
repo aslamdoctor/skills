@@ -19,7 +19,7 @@ st() { printf '{"state":"live","turn":%s,"status":{"app":"claude-code","state":"
 	stub_reply hc get.t21 "$(st working)"
 	run snd 101 "do the thing"
 	[ "$status" -eq 0 ]
-	[ "$output" = "delivered to smith-101 (working)" ]
+	[ "$output" = "delivered to 🤓 smith-101 (working)" ]
 	[ -n "$(stub_calls hc | rg '^send t21 ')" ]
 }
 
@@ -29,7 +29,7 @@ st() { printf '{"state":"live","turn":%s,"status":{"app":"claude-code","state":"
 	printf '%s\n' "$(st idle 2)" >"$STUB_DIR/hc.get.t21.3.json"
 	run snd 101 "go"
 	[ "$status" -eq 0 ]
-	[ "$output" = "delivered to smith-101 (working)" ]
+	[ "$output" = "delivered to 🤓 smith-101 (working)" ]
 }
 
 @test "blocked_presses_esc_first" {
@@ -50,7 +50,7 @@ st() { printf '{"state":"live","turn":%s,"status":{"app":"claude-code","state":"
 	stub_reply hc get.t21 "$(st blocked)"
 	run snd 101 "go"
 	[ "$status" -eq 1 ]
-	[ "$output" = "NOT DELIVERED: Smith-101 is blocked on a dialog; read it first" ]
+	[ "$output" = "NOT DELIVERED: 😎 SMITH-101 is blocked on a dialog; read it first" ]
 	[ -z "$(stub_calls hc | rg '^send ' || true)" ]
 }
 
@@ -102,7 +102,7 @@ st() { printf '{"state":"live","turn":%s,"status":{"app":"claude-code","state":"
 	stub_reply hc send '{}' 1
 	run snd 101 "go"
 	[ "$status" -eq 1 ]
-	[[ $output == "NOT DELIVERED to smith-101"* ]]
+	[[ $output == "NOT DELIVERED to 🤓 smith-101"* ]]
 }
 
 @test "send_timeout_not_delivered" {
@@ -111,7 +111,7 @@ st() { printf '{"state":"live","turn":%s,"status":{"app":"claude-code","state":"
 	echo 30 >"$STUB_DIR/hc.send.sleep"
 	SEND_TIMEOUT=1 run snd 101 "go"
 	[ "$status" -eq 1 ]
-	[[ $output == "NOT DELIVERED to smith-101"* ]]
+	[[ $output == "NOT DELIVERED to 🤓 smith-101"* ]]
 }
 
 @test "still_idle_exit_2_with_read_hint" {

@@ -1,6 +1,6 @@
 # Herdr app backend
 
-Use this file when smith runs inside the Herdr app (`HC_TERMINAL_ID` is set and `hc server status` succeeds). SKILL.md points at its sections as "§ <name>". `S` means this skill's `scripts/` directory. Every script needs the `RUN` env var. Workers are `hc` terminals: the worker for task 101 is named `smith-101` (hc name) and shown as `Smith-101` (tab and display name). Verified with hc 0.1.16 (herdr-app 0.1.16).
+Use this file when smith runs inside the Herdr app (`HC_TERMINAL_ID` is set and `hc server status` succeeds). SKILL.md points at its sections as "§ <name>". `S` means this skill's `scripts/` directory. Every script needs the `RUN` env var. Workers are `hc` terminals: the worker for task 101 is named `smith-101` (hc name) and shown as `😎 SMITH-101` (tab and display name); messages show the address as `🤓 smith-101`. Verified with hc 0.1.16 (herdr-app 0.1.16).
 
 Smith posts no toasts on this backend. Herdr's own toasts are the only ones.
 
@@ -34,7 +34,7 @@ EOF
 The kickoff is the **Kickoff** prompt from `references/prompts.md` (with the gate instruction). It becomes the agent's own first prompt, so nothing is sent afterwards. spawn.sh:
 - creates or reuses the worktree
 - starts the worker with `hc run`, the name `smith-<id>`, `--outlive-parent` and the label `smith.run=<basename of RUN>`
-- names the tab `Smith-<id>` and records its id as `.tab` (the `herdr.tab` label value becomes the tab id, and scripts use the recorded one)
+- names the tab `😎 SMITH-<id>` and records its id as `.tab` (the `herdr.tab` label value becomes the tab id, and scripts use the recorded one)
 - retries the terminal lookup, because a terminal can be missing from `herdr-app ls` right after `hc run`
 - selects the orchestrator's tab again, so focus doesn't move
 - confirms delivery from state (`working`, `blocked`, or `turn > 0` within 60 s) and prints the task record plus its status
@@ -55,7 +55,7 @@ Arm one watcher per run, after every prompt that starts work. Choose the mode fr
 
 In background-task mode the watcher exits after printing a report, so re-arm it after each report. In both modes it exits with "no live workers" once every task is closed, or gone and already reported.
 
-Gate messages and hc notes arrive as typed messages: `[smith] GATE <gate> Smith-<id>: <status> | <ref>` (sent by mark.sh) and `<hc>` notes (hc's own reports for child workers). The watcher reports the rest:
+Gate messages and hc notes arrive as typed messages: `[smith] GATE <gate> 😎 SMITH-<id>: <status> | <ref>` (sent by mark.sh) and `<hc>` notes (hc's own reports for child workers). The watcher reports the rest:
 - **GATE:** mark.sh could not reach the orchestrator, so the gate line is only in the log.
 - **GONE:** the worker disappeared.
 - **BLOCKED:** a dialog that stays up for 5 seconds or more.

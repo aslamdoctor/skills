@@ -58,7 +58,7 @@ stop_watch() {
 	hc_get working "$NOW" 1
 	start_watch
 	stop_watch
-	[ "$(cat "$OUT")" = "[smith] GATE Smith-101 (working): GATE spec | Spec ready | docs/spec.md. RUN=$RUN" ]
+	[ "$(cat "$OUT")" = "[smith] GATE 😎 SMITH-101 (working): GATE spec | Spec ready | docs/spec.md. RUN=$RUN" ]
 	[ "$(jq -r '.tasks["101"].gate_sent' "$RUN/run.json")" = true ]
 	start_watch
 	stop_watch
@@ -98,7 +98,7 @@ stop_watch() {
 	hc_get blocked "$OLD" 1 t5
 	start_watch
 	stop_watch
-	[ "$(cat "$OUT")" = "[smith] BLOCKED Smith-101 (blocked): no gate line yet. RUN=$RUN" ]
+	[ "$(cat "$OUT")" = "[smith] BLOCKED 😎 SMITH-101 (blocked): no gate line yet. RUN=$RUN" ]
 	[ "$(jq -r '.tasks["101"].reported.blocked' "$RUN/run.json")" = "$OLD" ]
 	start_watch
 	stop_watch
@@ -109,7 +109,7 @@ stop_watch() {
 	stub_reply hc get.t21 '{"state":"finished","parent":"t5","status_ms":0,"turn":2}'
 	start_watch
 	stop_watch
-	[ "$(cat "$OUT")" = "[smith] GONE Smith-101 (gone): no gate line yet. RUN=$RUN" ]
+	[ "$(cat "$OUT")" = "[smith] GONE 😎 SMITH-101 (gone): no gate line yet. RUN=$RUN" ]
 	[ "$(jq -r '.tasks["101"].reported.gone' "$RUN/run.json")" = true ]
 	# a child worker's exit is hc's to report, and nothing else is live
 	stub_reply hc get.t21 '{"state":"finished","parent":"t9","status_ms":0,"turn":2}'
@@ -125,7 +125,7 @@ stop_watch() {
 	hc_get idle "$OLD" 3
 	start_watch
 	stop_watch
-	[ "$(cat "$OUT")" = "[smith] STOPPED Smith-101 (idle): GATE spec | Spec ready | s.md. RUN=$RUN" ]
+	[ "$(cat "$OUT")" = "[smith] STOPPED 😎 SMITH-101 (idle): GATE spec | Spec ready | s.md. RUN=$RUN" ]
 	[ "$(jq -r '.tasks["101"].reported.stopped' "$RUN/run.json")" = "$OLD" ]
 	start_watch
 	stop_watch
@@ -136,7 +136,7 @@ stop_watch() {
 	hc_get done "$OLD" 3
 	start_watch
 	stop_watch
-	[ "$(cat "$OUT")" = "[smith] STOPPED Smith-101 (done): no gate line yet. RUN=$RUN" ]
+	[ "$(cat "$OUT")" = "[smith] STOPPED 😎 SMITH-101 (done): no gate line yet. RUN=$RUN" ]
 }
 
 @test "no_stopped_after_new_gate" {
@@ -170,7 +170,7 @@ stop_watch() {
 	eval "set -- $line"
 	[ "$1" = send ]
 	[ "$2" = t9 ]
-	[ "$3" = "[smith] STOPPED Smith-101 (idle): no gate line yet. RUN=$RUN" ]
+	[ "$3" = "[smith] STOPPED 😎 SMITH-101 (idle): no gate line yet. RUN=$RUN" ]
 	[ "$#" -eq 3 ]
 	[ "$(jq -r '.tasks["101"].reported.stopped' "$RUN/run.json")" = "$OLD" ]
 	[ ! -s "$OUT" ]
@@ -195,7 +195,7 @@ stop_watch() {
 	hc_get working "$NOW" 1
 	start_watch --notify
 	stop_watch 2
-	[ "$(stub_calls hc | rg -c '^send t9 .*GATE.*Smith-101')" -ge 1 ]
+	[ "$(stub_calls hc | rg -c '^send t9 .*GATE.*SMITH-101')" -ge 1 ]
 	[ "$(jq -r '.tasks["101"].gate_sent' "$RUN/run.json")" = true ]
 }
 
@@ -219,7 +219,7 @@ stop_watch() {
 	hc_get idle "$OLD" 3
 	# only the event can wake it before the 30 s tick
 	stop_watch 5
-	[[ $(cat "$OUT") == "[smith] STOPPED Smith-101"* ]]
+	[[ $(cat "$OUT") == "[smith] STOPPED 😎 SMITH-101"* ]]
 }
 
 @test "stream_label_and_json_flags" {
@@ -237,7 +237,7 @@ stop_watch() {
 	sleep 2
 	hc_get idle "$OLD" 3
 	stop_watch 6
-	[[ $(cat "$OUT") == "[smith] STOPPED Smith-101"* ]]
+	[[ $(cat "$OUT") == "[smith] STOPPED 😎 SMITH-101"* ]]
 	[ "$(stub_calls hc | rg -c '^events ')" -ge 2 ]
 }
 
@@ -290,7 +290,7 @@ stop_watch() {
 	stub_reply hc get.t21 '{"error":{"kind":"not_found","message":"no terminal"}}' 3
 	start_watch
 	stop_watch
-	[ "$(cat "$OUT")" = "[smith] GONE Smith-101 (gone): no gate line yet. RUN=$RUN" ]
+	[ "$(cat "$OUT")" = "[smith] GONE 😎 SMITH-101 (gone): no gate line yet. RUN=$RUN" ]
 }
 
 @test "missing_run_json_exits_1" {
@@ -306,7 +306,7 @@ stop_watch() {
 	stub_reply hc get.t22 "{\"state\":\"live\",\"status\":{\"state\":\"working\"},\"status_ms\":$NOW,\"turn\":1,\"parent\":\"t9\"}"
 	start_watch
 	stop_watch
-	[ "$(rg -c '^\[smith\] GATE Smith-10[12] ' "$OUT")" -eq 2 ]
+	[ "$(rg -c '^\[smith\] GATE 😎 SMITH-10[12] ' "$OUT")" -eq 2 ]
 	jq -e '.tasks["101"].gate_sent and .tasks["102"].gate_sent' "$RUN/run.json" >/dev/null
 	start_watch
 	stop_watch 3
@@ -337,9 +337,9 @@ stop_watch() {
 	[ "$(jq -r '.tasks["101"].reported.stopped' "$RUN/run.json")" = "$OLD" ]
 	sends=$(stub_calls hc | rg '^send ')
 	[ "$(wc -l <<<"$sends" | tr -d ' ')" -eq 3 ]
-	[[ $(awk "NR==1" <<<"$sends") == *Smith-101* ]]
-	[[ $(awk "NR==2" <<<"$sends") == *Smith-102* ]]
-	[[ $(awk "NR==3" <<<"$sends") == *Smith-101* ]]
+	[[ $(awk "NR==1" <<<"$sends") == *SMITH-101* ]]
+	[[ $(awk "NR==2" <<<"$sends") == *SMITH-102* ]]
+	[[ $(awk "NR==3" <<<"$sends") == *SMITH-101* ]]
 }
 
 @test "stop_leaves_no_processes" {

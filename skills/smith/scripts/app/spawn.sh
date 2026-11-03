@@ -36,7 +36,7 @@ agent=$(new_agent_name "$id")
 recorded=$(worker_hc "$id")
 for target in "$recorded" "$agent"; do
 	if [ "$(hc_state "$target")" != gone ]; then
-		jq -nc --arg a "$agent" --arg t "$target" '{error:"worker \($a) is still live (\($t)); adopt it, don'"'"'t respawn"}'
+		jq -nc --arg a "$(agent_display "$agent")" --arg t "$target" '{error:"worker \($a) is still live (\($t)); adopt it, don'"'"'t respawn"}'
 		exit 3
 	fi
 done
