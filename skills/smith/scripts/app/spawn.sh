@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # herdr-app worker spawn. Creates (or reuses) a worktree, starts the worker with `hc run`, renames its tab.
 # Usage: RUN=<run dir> spawn.sh <id> <branch> <base-ref> [--kind <kind>] [--resume <session>] < prompt.txt
+#   branch and base-ref '-': a review task. No worktree; the worker runs in the repo root.
 #   The prompt comes from stdin (may be empty with --resume) and becomes one argv word.
 #   kind default: $AGENT_KIND or claude. Launch templates live in launch.tsv.
 # Env: WT_ROOT (default $HOME/<repo>-wt), SPAWN_WAIT (default 60 s), SPAWN_INTERVAL (default 2 s), LAUNCH_TSV (test override).
@@ -43,7 +44,10 @@ done
 # 2. Worktree (same rules as scripts/spawn.sh).
 repo_root=$(git rev-parse --show-toplevel)
 root=${WT_ROOT:-"$HOME/$(basename "$repo_root")-wt"}
+type=code
+[ "$branch" = - ] && { type=review; branch=""; base=""; }
 wt="$root/$branch"
+[ "$type" = review ] && wt=$repo_root
 mkdir -p "$root"
 if [ ! -d "$wt" ]; then
 	git -C "$repo_root" fetch -q origin
@@ -147,8 +151,8 @@ if [ "$kind" = agy ] && [ -z "$session" ]; then
 fi
 
 # 8. Record.
-run_update '.tasks[$id] = ((.tasks[$id] // {}) + {id:$id, agent:$agent, hc:$hc, kind:$kind, branch:$branch, base:$base, worktree:$wt, space:$space, tab:$tab, session:$session, needs_you:false, gate_sent:true, reported:{}, updated:$now}) | del(.tasks[$id].closed) | .tasks[$id].gate //= "started"' \
-	--arg id "$id" --arg agent "$agent" --arg hc "$addr" --arg kind "$kind" --arg branch "$branch" --arg base "$base" \
+run_update '.tasks[$id] = ((.tasks[$id] // {}) + {id:$id, type:$type, agent:$agent, hc:$hc, kind:$kind, branch:$branch, base:$base, worktree:$wt, space:$space, tab:$tab, session:$session, needs_you:false, gate_sent:true, reported:{}, updated:$now}) | del(.tasks[$id].closed) | .tasks[$id].gate //= "started"' \
+	--arg id "$id" --arg type "$type" --arg agent "$agent" --arg hc "$addr" --arg kind "$kind" --arg branch "$branch" --arg base "$base" \
 	--arg wt "$wt" --arg space "$space" --arg tab "$tab" --arg session "$session" --arg now "$(now)"
 
 jq -c --arg id "$id" --arg status "$status" '.tasks[$id] + {status:$status, warnings:$ARGS.positional}' "$RUN/run.json" --args ${warnings[@]+"${warnings[@]}"}

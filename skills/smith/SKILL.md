@@ -1,6 +1,6 @@
 ---
 name: smith
-description: Orchestrate several coding tasks in parallel from one Herdr pane or the Herdr app, with any coding agent (Claude Code, Codex, Antigravity, Grok, OpenCode, Pi, Copilot, Cursor and the rest Herdr supports, or any other CLI agent). Each task gets its own git worktree, a background Herdr tab and a worker agent. Workers can be different kinds in one run. They stop at gates (spec, implemented, pr), show their gate in the Herdr sidebar and report back to this orchestrator session, which relays the user's decisions. A run is saved to disk, so workers can be resumed with their full conversation later. Works on any git project. Use when the user wants to work on multiple issues or tasks at once, e.g. "work on 101 and 102 in parallel", "spin up workers for these issues", "smith 101 102 103", "/smith", "use codex workers", "pick N issues and run them in parallel", or "resume yesterday's smith run". Requires Herdr (HERDR_ENV=1) or the Herdr app (hc).
+description: Orchestrate several coding tasks or PR reviews in parallel from one Herdr pane or the Herdr app, with any coding agent (Claude Code, Codex, OpenCode, Pi, Cursor or any other CLI agent Herdr supports). Each issue gets its own git worktree, a background Herdr tab and a worker agent; each open PR gets a review worker in a tab of its own. Workers can be different kinds in one run. They stop at gates (spec, implemented, pr), show their gate in the Herdr sidebar and report back to this orchestrator session, which relays the user's decisions. A run is saved to disk, so workers can be resumed with their full conversation later. Use when the user wants to work on multiple issues or tasks at once, e.g. "work on 101 and 102 in parallel", "spin up workers for these issues", "smith 101 102 103", "/smith", "smith 5737 5760" with PR numbers to review them, "use codex workers", "pick N issues and run them in parallel", or "resume yesterday's smith run". Requires Herdr (HERDR_ENV=1) or the Herdr app (hc).
 ---
 
 # Smith
@@ -33,18 +33,26 @@ See `references/<backend>.md` § Agent support. Worker kinds come from Herdr, an
 
 ## 2. Pick the tasks and the setup
 
-**Tasks.** Use the IDs the user gave. If they asked you to choose ("pick 3"), list open candidates (e.g. with `gh issue list`), read each one's blockers and dependencies, and choose tasks that can run in parallel without depending on each other's unmerged code. Show a table of the choices and why.
+**Tasks.** Use the IDs the user gave. Classify each ID before anything else, since a PR number and an issue number look the same:
+
+| Check | Task type | Gates | Spawn |
+|---|---|---|---|
+| `gh pr view <id> --json state,author,url` succeeds and `state` is `OPEN` | review | `findings / posted` | `spawn.sh <id> - -` (no worktree, runs in the repo root), **Review kickoff** |
+| Anything else (an issue, a slug, a merged or closed PR) | code | `spec / implemented / pr` | as below, **Kickoff** |
+
+Show the type per ID in the setup table. A run can mix both types. If a code-task issue already has an open PR (`gh pr list --search "<id> in:title,body" --state open`), ask whether to review that PR, resume its worker for review fixes (§ 8), or start a fresh code task. If they asked you to choose ("pick 3"), list open candidates (e.g. with `gh issue list`), read each one's blockers and dependencies, and choose tasks that can run in parallel without depending on each other's unmerged code. Show a table of the choices and why.
 
 **Setup.** Detect each value from the repo's instruction files (AGENTS.md, CLAUDE.md, GEMINI.md, .cursor/rules and similar), your memory or notes, and recent branches and PRs (`gh pr list --state all --limit 10 --json headRefName,baseRefName`). Ask only for what you can't find:
 
 | Setting | Where to look |
 |---|---|
-| Base ref for new branches | Project rules, epic or feature-branch notes, recent PR bases |
+| Base ref for new branches (code tasks) | Project rules, epic or feature-branch notes, recent PR bases |
 | PR base | Same as above (often the base ref's branch) |
 | Branch name format | Branch-creation rules, recent branch names |
 | Commit format | Commit workflow rules |
 | Ship flow | A ship skill, or the project's PR rules |
 | Pre-ship review | A self-review or preflight skill, if the project has one (else none) |
+| Review skill (review tasks) | A PR review skill for the project (e.g. thrive-review-pr), else a plain `gh pr diff` review with findings only |
 | Test and lint commands | Instruction files, package.json / composer.json / Makefile |
 | Worker kind per task | Your own kind |
 | Worktree root | `~/<repo>-wt/<branch>` (override with `WT_ROOT`) |
@@ -58,7 +66,7 @@ Show the detected setup as one table and confirm it with the user before spawnin
 
 ## 3. Spawn workers
 
-Spawn each worker and deliver the **Kickoff** prompt from `references/prompts.md`, with your backend's gate instruction: `references/<backend>.md` § Spawn.
+Spawn each worker and deliver the **Kickoff** prompt (code tasks) or the **Review kickoff** (review tasks) from `references/prompts.md`, with your backend's gate instruction: `references/<backend>.md` § Spawn.
 
 ## 4. Watch
 
@@ -74,6 +82,8 @@ After every prompt that starts work, arm the watcher: `references/<backend>.md` 
 2. Report to the user based on what fired:
    - **GATE spec:** the approach in a few lines, deviations from the task, and the worker's open questions as a table with *your* recommendation for each. Point out conflicts with sibling workers (same method, same docs section).
    - **GATE implemented:** the commit hash, message and changed files (in the user's commit-report format if they have one), test and lint results, anything the worker changed from the approved spec, and new shared-environment problems.
+   - **GATE findings:** the worker's picker output verbatim (findings table with default picks, questions, coverage gaps), then ask for the picks and the post decision with the same options the review skill gives. Relay them with the **Review picks** template.
+   - **GATE posted:** the review URL, or that it wasn't posted.
    - **GATE question / pr:** the exact question or draft text (thread replies, issue comments), verbatim.
    - **BLOCKED:** what the dialog asks.
    - **STOPPED / GONE:** what the screen shows, and whether to nudge, resume or drop the task.
@@ -84,7 +94,7 @@ Keep a status table in every report: `references/<backend>.md` § Board.
 
 ## 6. Ship
 
-Only on the user's go-ahead per task, using the **Ship** template. Pre-answer the ship flow's routine questions with the user's standing answers (for example: local automated QA No because the dev site points at the main checkout, staging skipped from a worktree, default reviewer). Ask once whether those answers apply to all workers in the run.
+Code tasks only. Only on the user's go-ahead per task, using the **Ship** template. Pre-answer the ship flow's routine questions with the user's standing answers (for example: local automated QA No because the dev site points at the main checkout, staging skipped from a worktree, default reviewer). Ask once whether those answers apply to all workers in the run.
 
 Ship stacked tasks as stacked PRs (see **Stacked ship** in the templates). After a parent PR merges, the child needs a rebase and its PR switched to the real base.
 

@@ -27,6 +27,28 @@ RUN=<run> <skill-scripts>/mark.sh <id> <gate> "<one-sentence status>" "<path, co
 It updates the run record and tells the orchestrator. Ask questions in plain text; don't open interactive question dialogs. If you need a decision, mark gate 'question' with the question as the status, and stop.
 ```
 
+## Review kickoff
+
+For a review task (the ID is an open PR). The worker runs in the repo root with no worktree.
+
+```
+You are a worker reviewing PR <PR URL>, run from an orchestrator agent in another Herdr tab. You are in the main checkout, which other review workers share. This is a review, not a coding task: don't switch branches, create branches or worktrees, edit files, commit or push.
+
+Follow <review skill path>/SKILL.md for this PR<mode note>. Where the skill asks me a question through a dialog, ask it in plain text at a gate instead.
+
+<gate instruction>
+GATE findings: once the review is written and humanized, and before anything is posted, mark gate findings with the path to the skill's picker output (findings table with the default picks, questions, coverage gaps) as the ref. Don't post yet.
+GATE posted: after I send the picks and the post decision, finish the skill's posting steps exactly as I answered, then mark gate posted with the review URL. If I said don't post, mark gate posted with "not posted".
+```
+
+**Mode note**, first match wins: " in self-review mode" when the PR author is the user (`gh api user -q .login`); " in re-check mode (pass `recheck`)" when the user already reviewed the PR (`gh pr view <n> --json reviews`); otherwise empty.
+
+## Review picks
+
+```
+<user>'s picks for PR <n>: findings <default | confirmed | all | none | S1,S3>, questions <all | none | Q1,Q2>. Post decision: <post | approve and post | don't post>. <Edited text, verbatim, if any>.
+```
+
 ## Spec approval
 
 ```

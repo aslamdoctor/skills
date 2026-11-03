@@ -244,3 +244,19 @@ hc_run_line() { stub_calls hc | rg '^run ' | head -1; }
 	[ "$status" -eq 0 ]
 	jq -e '.tasks["101"] | has("closed") | not' "$RUN/run.json" >/dev/null
 }
+
+@test "review_task_skips_worktree_and_runs_in_repo_root" {
+	run sp 5737 - - <<<"review"
+	[ "$status" -eq 0 ]
+	t=$(jq -c '.tasks["5737"]' "$RUN/run.json")
+	echo "$t" | jq -e --arg r "$(git rev-parse --show-toplevel)" '.type == "review" and .branch == "" and .base == "" and .worktree == $r' >/dev/null
+	[ ! -d "$WT_ROOT/-" ]
+	[ -z "$(git worktree list | rg -v "^$(git rev-parse --show-toplevel) " || true)" ]
+	stub_calls hc | rg '^run ' | head -1 | rg -q -- "--cwd $(git rev-parse --show-toplevel)"
+}
+
+@test "code_task_records_type_code" {
+	run sp 101 b101 origin/main <<<"x"
+	[ "$status" -eq 0 ]
+	[ "$(jq -r '.tasks["101"].type' "$RUN/run.json")" = code ]
+}

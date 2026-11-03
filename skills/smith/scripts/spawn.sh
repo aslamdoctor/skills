@@ -4,6 +4,7 @@
 #   id         issue number or short slug; the worker is Smith-<id> (Herdr agent smith-<id>)
 #   branch     branch to create (reused if it already exists locally)
 #   base-ref   ref to cut a new branch from: origin/<base> or origin/<parent-branch> for stacked work
+#              branch and base-ref '-': a review task. No worktree; the worker runs in the repo root.
 #   --kind     any Herdr agent kind (see agents.tsv); default $AGENT_KIND or claude
 #   --resume   start the agent in its previous conversation (resume args come from agents.tsv)
 #   --cmd      tier D: an agent Herdr doesn't recognize. Launched with `pane run`; kind is recorded as custom
@@ -26,7 +27,10 @@ done
 [ "${HERDR_ENV:-}" = 1 ] || { echo '{"error":"not inside a Herdr pane"}'; exit 1; }
 repo_root=$(git rev-parse --show-toplevel)
 root=${WT_ROOT:-"$HOME/$(basename "$repo_root")-wt"}
+type=code
+[ "$branch" = - ] && { type=review; branch=""; base=""; }
 wt="$root/$branch"
+[ "$type" = review ] && wt=$repo_root
 agent=$(new_agent_name "$id"); label=$(worker_label "$id")
 
 mkdir -p "$root"
@@ -76,8 +80,8 @@ fi
 herdr pane report-metadata "$pane" --source smith --title "$label" \
 	--state-label "working=$label working" --token "gate=started" >/dev/null 2>&1 || true
 
-run_update '.tasks[$id] = ((.tasks[$id] // {}) + {id:$id, agent:$agent, kind:$kind, cmd:$cmd, branch:$branch, base:$base, worktree:$wt, tab:$tab, pane:$pane, session:$session, updated:$now}) | .tasks[$id].gate //= "started"' \
-	--arg id "$id" --arg agent "$agent" --arg kind "$kind" --arg cmd "$cmd" --arg branch "$branch" --arg base "$base" \
+run_update '.tasks[$id] = ((.tasks[$id] // {}) + {id:$id, type:$type, agent:$agent, kind:$kind, cmd:$cmd, branch:$branch, base:$base, worktree:$wt, tab:$tab, pane:$pane, session:$session, updated:$now}) | .tasks[$id].gate //= "started"' \
+	--arg id "$id" --arg type "$type" --arg agent "$agent" --arg kind "$kind" --arg cmd "$cmd" --arg branch "$branch" --arg base "$base" \
 	--arg wt "$wt" --arg tab "$tab" --arg pane "$pane" --arg session "$session" --arg now "$(now)"
 
 jq -c --arg id "$id" --arg status "$status" '.tasks[$id] + {status:$status}' "$RUN/run.json"
