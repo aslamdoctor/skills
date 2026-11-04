@@ -21,7 +21,7 @@ setup() {
 	git remote add origin "$BATS_TEST_TMPDIR/origin.git"
 	git push -q origin main
 	write_run '{"backend":"herdr-app","orchestrator":{"address":"t9","kind":"claude-code","space":"sp1","tab":"tb1"},"tasks":{}}'
-	stub_reply hc run '{"address":"t21","name":"smith-101","parent":"t9","state":"live","turn":0}'
+	stub_reply hc run '{"address":"t21","name":"code-101","parent":"t9","state":"live","turn":0}'
 	stub_reply hc get.t21 '{"state":"live","status":{"app":"claude-code","state":"working"},"turn":1,"status_ms":5}'
 	stub_reply herdr-app ls '{"spaces":[{"id":"sp2","name":"smith","tabs":[{"id":"tb7","name":"x","terminals":[{"terminal":"t21"}]},{"id":"tb8","name":"y","terminals":[{"terminal":"t30"}]}]}]}'
 }
@@ -96,7 +96,7 @@ hc_run_line() { stub_calls hc | rg '^run ' | head -1; }
 }
 
 @test "refuses_live_worker" {
-	stub_reply hc get.smith-101 '{"state":"live","status":{"state":"idle"}}'
+	stub_reply hc get.code-101 '{"state":"live","status":{"state":"idle"}}'
 	run sp 101 b101 origin/main <<<"x"
 	[ "$status" -eq 3 ]
 	echo "$output" | jq -e '.error | test("still live")' >/dev/null
@@ -108,9 +108,9 @@ hc_run_line() { stub_calls hc | rg '^run ' | head -1; }
 	[ "$status" -eq 0 ]
 	line=$(hc_run_line)
 	echo "$line" | rg -q -- '--outlive-parent'
-	echo "$line" | rg -q -- '--name smith-101'
+	echo "$line" | rg -q -- '--name code-101'
 	echo "$line" | rg -q -- '--label herdr.space=sp1'
-	echo "$line" | rg -q -- '--label herdr.tab=smith-101'
+	echo "$line" | rg -q -- '--label herdr.tab=code-101'
 	echo "$line" | rg -q -- '--label smith.run=run'
 	echo "$line" | rg -q -- '--label smith.task=101'
 	[ -z "$(echo "$line" | rg -- '--force|--dangerously' || true)" ]
@@ -120,7 +120,7 @@ hc_run_line() { stub_calls hc | rg '^run ' | head -1; }
 	run sp 101 b101 origin/main <<<"x"
 	[ "$status" -eq 0 ]
 	calls=$(stub_calls herdr-app)
-	echo "$calls" | rg -q 'do tab.rename --id tb7 --name .*smith-101'
+	echo "$calls" | rg -q 'do tab.rename --id tb7 --name .*code-101'
 	n_ren=$(echo "$calls" | rg -n 'tab.rename' | head -1 | cut -d: -f1)
 	n_sel=$(echo "$calls" | rg -n 'do tab.select --id tb1' | head -1 | cut -d: -f1)
 	[ "$n_ren" -lt "$n_sel" ]
@@ -145,7 +145,7 @@ hc_run_line() { stub_calls hc | rg '^run ' | head -1; }
 	run sp 101 b101 origin/main <<<"x"
 	[ "$status" -eq 0 ]
 	t=$(jq -c '.tasks["101"]' "$RUN/run.json")
-	echo "$t" | jq -e '.id == "101" and .agent == "smith-101" and .hc == "t21" and .kind == "claude" and .branch == "b101" and .base == "origin/main" and .space == "sp1" and .tab == "tb7" and .needs_you == false and .gate == "started" and (.updated | length > 0) and (.worktree | endswith("/b101"))' >/dev/null
+	echo "$t" | jq -e '.id == "101" and .agent == "code-101" and .hc == "t21" and .kind == "claude" and .branch == "b101" and .base == "origin/main" and .space == "sp1" and .tab == "tb7" and .needs_you == false and .gate == "started" and (.updated | length > 0) and (.worktree | endswith("/b101"))' >/dev/null
 	[ -d "$WT_ROOT/b101" ]
 	echo "$output" | jq -e '.status == "working" and .hc == "t21"' >/dev/null
 }
@@ -274,4 +274,13 @@ hc_run_line() { stub_calls hc | rg '^run ' | head -1; }
 	run sp 101 b101 origin/main <<<"x"
 	[ "$status" -eq 0 ]
 	[ "$(jq -r '.tasks["101"].type' "$RUN/run.json")" = code ]
+}
+
+@test "review_task_is_named_review" {
+	stub_reply hc run '{"address":"t21","name":"review-5737","parent":"t9","state":"live","turn":0}'
+	run sp 5737 - - <<<"x"
+	[ "$status" -eq 0 ]
+	hc_run_line | rg -q -- '--name review-5737'
+	stub_calls herdr-app | rg -q 'do tab.rename --id tb7 --name review-5737'
+	[ "$(jq -r '.tasks["5737"].agent' "$RUN/run.json")" = review-5737 ]
 }

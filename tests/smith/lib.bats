@@ -67,3 +67,27 @@ lib() { . "$S/lib.sh"; }
 	[ "$(worker_hc 101)" = t21 ]
 	[ "$(worker_hc 102)" = smith-102 ]
 }
+
+@test "worker_names_carry_task_type" {
+	lib
+	[ "$(new_agent_name 101)" = code-101 ]
+	[ "$(new_agent_name add-Login code)" = code-add-login ]
+	[ "$(new_agent_name 5737 review)" = review-5737 ]
+	[ "$(new_agent_name https://github.com/acme/thrive-themes/pull/5760 review)" = review-thrive-themes-5760 ]
+	[ "$(new_agent_name https://github.com/acme/a-very-long-repository-name-here/pull/5760 review | wc -c | tr -d ' ')" -le 33 ]
+}
+
+@test "worker_label_is_recorded_name_or_typed_default" {
+	write_run '{"tasks":{"101":{"id":"101","agent":"smith-101"},"5737":{"id":"5737","type":"review"},"102":{"id":"102"}}}'
+	lib
+	[ "$(worker_label 101)" = smith-101 ]
+	[ "$(worker_label 5737)" = review-5737 ]
+	[ "$(worker_label 102)" = code-102 ]
+}
+
+@test "orch_label_uses_address_from_first_digit" {
+	lib
+	[ "$(orch_label t7)" = SMITH-ORC7 ]
+	[ "$(orch_label t2n)" = SMITH-ORC2N ]
+	[ "$(orch_label abc)" = SMITH-ORCABC ]
+}

@@ -8,9 +8,9 @@ setup() {
 	export RUN STUB_DIR
 	export PATH="$REPO_ROOT/tests/smith/stubs:$PATH"
 	export S="$REPO_ROOT/skills/smith/scripts/app"
-	write_run '{"backend":"herdr-app","orchestrator":{"address":"t7","space":"sp1","tab":"tb1"},"tasks":{"101":{"id":"101","agent":"smith-101","hc":"t21","tab":"tb21","worktree":"/wt/101"},"102":{"id":"102","agent":"smith-102","hc":"t22","tab":"tb22","worktree":"/wt/102"}}}'
+	write_run '{"backend":"herdr-app","orchestrator":{"address":"t7","space":"sp1","tab":"tb1"},"tasks":{"101":{"id":"101","agent":"code-101","hc":"t21","tab":"tb21","worktree":"/wt/101"},"102":{"id":"102","agent":"code-102","hc":"t22","tab":"tb22","worktree":"/wt/102"}}}'
 	# The user's terminals t7/t8 and the run's worker tabs share space sp1.
-	stub_reply herdr-app ls '{"spaces":[{"id":"sp1","name":"mine","tabs":[{"id":"tb1","name":"x","terminals":[{"terminal":"t7"},{"terminal":"t8"}]},{"id":"tb21","name":"🤓 smith-101","terminals":[{"terminal":"t21"}]},{"id":"tb22","name":"🤓 smith-102","terminals":[{"terminal":"t22"}]}]}]}'
+	stub_reply herdr-app ls '{"spaces":[{"id":"sp1","name":"mine","tabs":[{"id":"tb1","name":"x","terminals":[{"terminal":"t7"},{"terminal":"t8"}]},{"id":"tb21","name":"code-101","terminals":[{"terminal":"t21"}]},{"id":"tb22","name":"code-102","terminals":[{"terminal":"t22"}]}]}]}'
 }
 
 cls() { "$S/close.sh" "$@"; }
@@ -110,7 +110,7 @@ cls() { "$S/close.sh" "$@"; }
 }
 
 @test "close_clears_needs_you" {
-	write_run '{"backend":"herdr-app","tasks":{"101":{"id":"101","agent":"smith-101","hc":"t21","tab":"tb21","needs_you":true}}}'
+	write_run '{"backend":"herdr-app","tasks":{"101":{"id":"101","agent":"code-101","hc":"t21","tab":"tb21","needs_you":true}}}'
 	run cls 101
 	[ "$status" -eq 0 ]
 	[ "$(jq -r '.tasks["101"].closed' "$RUN/run.json")" = true ]

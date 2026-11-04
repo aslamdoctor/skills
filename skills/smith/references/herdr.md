@@ -1,6 +1,6 @@
 # Herdr backend
 
-Use this file when smith runs inside a Herdr pane (`HERDR_ENV=1`). SKILL.md points at its sections as "§ <name>". `S` means this skill's `scripts/` directory. Every script needs the `RUN` env var. Herdr agent names are lowercase, so the worker for task 101 is `smith-101` (its label is `🤓 smith-101`, and messages show the address as `🤓 smith-101`). Scripts read the name from `run.json`, so older runs with `i<id>` workers keep working.
+Use this file when smith runs inside a Herdr pane (`HERDR_ENV=1`). SKILL.md points at its sections as "§ <name>". `S` means this skill's `scripts/` directory. Every script needs the `RUN` env var. Herdr agent names are lowercase, so the worker for issue 101 is `code-101` and the worker reviewing PR 5737 is `review-5737`. The same name is the tab and pane label and what messages show. Scripts read the name from `run.json`, so older runs with `smith-<id>` or `i<id>` workers keep working.
 
 ## Agent support
 
@@ -20,7 +20,11 @@ The orchestrator works the same way. Its wake-up mode depends on its own kind (s
 1. Check `test "${HERDR_ENV:-}" = 1`. If it fails, say Smith needs to run inside a Herdr pane and stop. Load the `herdr` skill if one is available.
 2. Find your own kind: `herdr agent get "$HERDR_PANE_ID" | jq -r .result.agent.agent`. This picks the watch mode in § Watch.
 3. Pick the worker kind (or kinds) with the user. The default is your own kind. For each kind, check `herdr integration status`, and offer `herdr integration install <integration>` (the integration name is in `agents.tsv`) if it isn't `current`.
-4. Rename your own tab so it stands out from the workers: `herdr tab rename "$HERDR_TAB_ID" "😎 SMITH-$HERDR_PANE_ID"`. If it fails, carry on.
+4. Rename your own tab so it stands out from the workers: `SMITH-ORC` plus your pane id from its first digit on, uppercased:
+   ```bash
+   n=${HERDR_PANE_ID#"${HERDR_PANE_ID%%[0-9]*}"}; herdr tab rename "$HERDR_TAB_ID" "SMITH-ORC$(printf %s "${n:-$HERDR_PANE_ID}" | tr a-z A-Z)"
+   ```
+   If it fails, carry on.
 5. Choose the run directory: `RUN=~/.smith/runs/<repo>-<YYYY-MM-DD>`. Reuse it if it exists for today. It holds `run.json` (one record per task) and `gates/<id>.md` (the gate log).
 
 ## Spawn
@@ -32,9 +36,9 @@ RUN=<run> S/spawn.sh <id> <branch> <base-ref> --cmd "<launch command>"   # tier 
 
 spawn.sh:
 - creates or reuses the worktree
-- opens a background tab and starts the worker `smith-<id>`
+- opens a background tab and starts the worker `code-<id>` (`review-<id>` when branch and base are `-`)
 - records the task in `run.json` (kind, pane, tab, session ID if one is reported)
-- labels the tab and pane `🤓 smith-<id>` in the sidebar
+- labels the tab and pane with the same name in the sidebar
 - prints the task record
 
 If the status isn't `idle`, read the screen. New worktree paths often bring up a first-run dialog (folder trust, login, model picker). Bring it to the user before answering it.

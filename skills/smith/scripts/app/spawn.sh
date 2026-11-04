@@ -30,13 +30,15 @@ while [ $# -gt 0 ]; do
 done
 
 prompt=$(cat)
-agent=$(new_agent_name "$id")
+type=code
+[ "$branch" = - ] && { type=review; branch=""; base=""; }
+agent=$(new_agent_name "$id" "$type")
 
 # 1. Refuse to respawn a live worker.
 recorded=$(worker_hc "$id")
 for target in "$recorded" "$agent"; do
 	if [ "$(hc_state "$target")" != gone ]; then
-		jq -nc --arg a "$(agent_display "$agent")" --arg t "$target" '{error:"worker \($a) is still live (\($t)); adopt it, don'"'"'t respawn"}'
+		jq -nc --arg a "$agent" --arg t "$target" '{error:"worker \($a) is still live (\($t)); adopt it, don'"'"'t respawn"}'
 		exit 3
 	fi
 done
@@ -44,8 +46,6 @@ done
 # 2. Worktree (same rules as scripts/spawn.sh).
 repo_root=$(git rev-parse --show-toplevel)
 root=${WT_ROOT:-"$HOME/$(basename "$repo_root")-wt"}
-type=code
-[ "$branch" = - ] && { type=review; branch=""; base=""; }
 wt="$root/$branch"
 [ "$type" = review ] && wt=$repo_root
 mkdir -p "$root"
@@ -117,7 +117,7 @@ for _ in 1 2 3 4 5 6 7 8 9 10; do
 done
 if [ -z "$tab" ]; then
 	warn "tab for $addr not found in herdr-app ls; it was not renamed"
-elif ! rn=$(app_do tab.rename --id "$tab" --name "$(worker_label "$id")" 2>&1); then
+elif ! rn=$(app_do tab.rename --id "$tab" --name "$agent" 2>&1); then
 	warn "tab.rename failed for $tab: $rn"
 fi
 if [ -z "$orch_tab" ]; then

@@ -7,7 +7,7 @@ description: Orchestrate several coding tasks or PR reviews in parallel from one
 
 This session is the orchestrator. It never writes task code itself. It creates workers, sends them prompts, watches them, and brings their questions to the user. Workers do the work in their own worktree and tab.
 
-Workers are Smith's copies, named after their task: the worker for task 101 is `🤓 smith-101` in the sidebar, toasts and reports. This orchestrator's own tab is `😎 SMITH-<address>`, after its own terminal address (e.g. `😎 SMITH-t7`).
+Workers are Smith's copies, named after their task type and task: `code-<id>` for an issue or slug (`code-101`) and `review-<id>` for a PR (`review-5737`). The same name is the address and what the sidebar, toasts and reports show. This orchestrator's own tab is `SMITH-ORC<n>`, where `<n>` is its terminal address from the first digit on, uppercased (`t7` gives `SMITH-ORC7`). Older runs keep the names recorded in `run.json` (`smith-<id>`, `i<id>`).
 
 Prompt templates are in `references/prompts.md`. Backend-specific steps are in `references/<backend>.md`; this file points at their sections as "`references/<backend>.md` § <name>".
 
@@ -40,7 +40,7 @@ See `references/<backend>.md` § Agent support. Worker kinds come from Herdr, an
 | `gh pr view <id> --json state,author,url` succeeds and `state` is `OPEN` | review | `findings / posted` | `spawn.sh <id> - -` (no worktree, runs in the repo root), **Review kickoff** |
 | Anything else (an issue, a slug, a merged or closed PR) | code | `spec / implemented / pr` | as below, **Kickoff** |
 
-A full PR URL is a review task for that PR, even in another repo. Keep the URL as the task ID everywhere (`gh pr view <url>`, `spawn.sh <url> - -`, the kickoff, `send.sh`, `close.sh`): a bare number would point at this repo. Worker names shorten it to `<repo>-<number>`.
+A full PR URL is a review task for that PR, even in another repo. Keep the URL as the task ID everywhere (`gh pr view <url>`, `spawn.sh <url> - -`, the kickoff, `send.sh`, `close.sh`): a bare number would point at this repo. Worker names shorten it to `review-<repo>-<number>`.
 
 Show the type per ID in the setup table. A run can mix both types. If a code-task issue already has an open PR (`gh pr list --search "<id> in:title,body" --state open`), ask whether to review that PR, resume its worker for review fixes (§ 8), or start a fresh code task. If they asked you to choose ("pick 3"), list open candidates (e.g. with `gh issue list`), read each one's blockers and dependencies, and choose tasks that can run in parallel without depending on each other's unmerged code. Show a table of the choices and why.
 

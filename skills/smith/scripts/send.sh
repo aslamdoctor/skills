@@ -19,7 +19,7 @@ run_update '.tasks[$id].gate_lines = ($n | tonumber)' --arg id "$id" --arg n "$l
 
 if [ "$kind" = custom ]; then
 	herdr pane send-text "$pane" "$msg" >/dev/null && sleep 0.5 && herdr pane send-keys "$pane" enter >/dev/null \
-		&& { echo "sent to $(agent_display "$agent") (custom pane $pane; check the screen to confirm)"; exit 0; }
+		&& { echo "sent to $agent (custom pane $pane; check the screen to confirm)"; exit 0; }
 	echo "NOT DELIVERED to custom pane $pane"; exit 1
 fi
 
@@ -28,14 +28,14 @@ fi
 # Never pass --timeout here: without --wait the CLI rejects it and sends nothing.
 out=$(herdr agent prompt "$agent" "$msg" 2>&1)
 if [ "$(jq -r '.result.type // empty' <<<"$out" 2>/dev/null)" != agent_prompted ]; then
-	echo "NOT DELIVERED to $(agent_display "$agent"): $out"
+	echo "NOT DELIVERED to $agent: $out"
 	exit 1
 fi
 
 for _ in 1 2 3 4; do
 	sleep 2
 	state=$(agent_state "$agent")
-	[ "$state" = working ] && { echo "delivered to $(agent_display "$agent") (working)"; exit 0; }
+	[ "$state" = working ] && { echo "delivered to $agent (working)"; exit 0; }
 done
-echo "prompted $(agent_display "$agent") but it is still '$state'; check with: herdr agent read $agent --source recent-unwrapped --lines 30"
+echo "prompted $agent but it is still '$state'; check with: herdr agent read $agent --source recent-unwrapped --lines 30"
 exit 2

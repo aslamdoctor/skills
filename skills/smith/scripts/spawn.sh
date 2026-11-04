@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Create (or reuse) a worktree for one task, open a background Herdr tab in it and start a worker agent.
 # Usage: RUN=<run dir> spawn.sh <id> <branch> <base-ref> [--kind <kind>] [--resume <session-id>] [--cmd "<launch command>"]
-#   id         issue number or short slug; the worker is "🤓 smith-<id>" (Herdr agent smith-<id>)
+#   id         issue number, short slug, or PR (number or URL) for a review; the worker is code-<id> or review-<id>
 #   branch     branch to create (reused if it already exists locally)
 #   base-ref   ref to cut a new branch from: origin/<base> or origin/<parent-branch> for stacked work
 #              branch and base-ref '-': a review task. No worktree; the worker runs in the repo root.
@@ -31,7 +31,7 @@ type=code
 [ "$branch" = - ] && { type=review; branch=""; base=""; }
 wt="$root/$branch"
 [ "$type" = review ] && wt=$repo_root
-agent=$(new_agent_name "$id"); label=$(worker_label "$id")
+agent=$(new_agent_name "$id" "$type"); label=$agent
 
 mkdir -p "$root"
 if [ ! -d "$wt" ]; then

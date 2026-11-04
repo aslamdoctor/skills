@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # herdr-app preflight. Usage: RUN=<run dir> preflight.sh [--resume]
 # Records the backend and the orchestrator (address, kind, space, tab). Workers open as tabs in the
-# orchestrator's space and show nested under it in the sidebar. Renames the orchestrator's tab to "😎 SMITH-<address>".
+# orchestrator's space and show nested under it in the sidebar. Renames the orchestrator's tab to "SMITH-ORC<n>" (t7 -> SMITH-ORC7).
 # Prints run.json minus tasks as one JSON line.
 set -euo pipefail
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)

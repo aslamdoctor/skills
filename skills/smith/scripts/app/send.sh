@@ -41,7 +41,7 @@ fi
 
 turn0=$(hc_turn "$target")
 if ! send_bounded "${SEND_TIMEOUT:-30}" "$target" "$msg"; then
-	echo "NOT DELIVERED to $(agent_display "$agent"): hc send failed or timed out"
+	echo "NOT DELIVERED to $agent: hc send failed or timed out"
 	exit 1
 fi
 
@@ -50,11 +50,11 @@ for _ in $(seq "$(polls "${SEND_WAIT:-8}")"); do
 	sleep "$interval"
 	state=$(hc_state "$target")
 	if [ "$state" = working ] || [ "$(hc_turn "$target")" -gt "$turn0" ] 2>/dev/null; then
-		echo "delivered to $(agent_display "$agent") (working)"
+		echo "delivered to $agent (working)"
 		clear_needs_you
 		exit 0
 	fi
 done
 clear_needs_you
-echo "sent to $(agent_display "$agent") but it is still '$state'; check with: hc read $target --lines 30"
+echo "sent to $agent but it is still '$state'; check with: hc read $target --lines 30"
 exit 2

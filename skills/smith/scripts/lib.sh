@@ -22,21 +22,22 @@ run_update() {
 
 task_field() { jq -r --arg id "$1" ".tasks[\$id].$2 // empty" "$RUN/run.json"; }
 
-# Workers are Smith's copies, named after their task. Herdr agent names must be lowercase
-# (a-z, 0-9, '-', '_', max 32), so smith-<id> is the address and "🤓 smith-<id>" is what people see.
-# Messages that print the address show it as "🤓 smith-<id>" (agent_display); commands always use the plain address.
-# The orchestrator's own tab is "😎 SMITH-<its terminal address>" (orch_label), so it stands out from its workers.
+# Workers are named after their task type and task: code-<id> for an issue or slug, review-<id> for a PR.
+# Herdr agent names must be lowercase (a-z, 0-9, '-', '_', max 32). The same name is the address and
+# what the sidebar, tabs and messages show.
+# The orchestrator's own tab is "SMITH-ORC<n>" (orch_label), where <n> is its terminal address from the
+# first digit on, uppercased (t7 -> SMITH-ORC7), so it stands out from its workers.
 # A PR URL (a PR in another repo) shortens to <repo>-<number>, so two URLs don't truncate to the same name.
 short_id() { if [[ $1 =~ ^https?://[^/]+/[^/]+/([^/]+)/pull/([0-9]+) ]]; then echo "${BASH_REMATCH[1]}-${BASH_REMATCH[2]}"; else echo "$1"; fi; }
-new_agent_name() { local n; n=$(printf 'smith-%s' "$(short_id "$1")" | tr 'A-Z' 'a-z' | tr -c 'a-z0-9_-' '-'); echo "${n:0:32}"; }
-worker_label() { echo "🤓 smith-$(short_id "$1")"; }
-agent_display() { echo "🤓 $1"; }
+# new_agent_name <id> [code|review]
+new_agent_name() { local n; n=$(printf '%s-%s' "${2:-code}" "$(short_id "$1")" | tr 'A-Z' 'a-z' | tr -c 'a-z0-9_-' '-'); echo "${n:0:32}"; }
+worker_label() { worker_agent "$1"; }
 # Task ids can be PR URLs, so any file named after a task uses file_key (no slashes).
 file_key() { short_id "$1" | tr '/' '-'; }
 gate_log() { echo "$RUN/gates/$(file_key "$1").md"; }
-orch_label() { echo "😎 SMITH-$1"; }
-# The address recorded in run.json, so runs from before the rename (i<id>) keep working.
-worker_agent() { local a; a=$(task_field "$1" agent); echo "${a:-$(new_agent_name "$1")}"; }
+orch_label() { local n=${1#"${1%%[0-9]*}"}; echo "SMITH-ORC$(printf '%s' "${n:-$1}" | tr 'a-z' 'A-Z')"; }
+# The address recorded in run.json, so runs from before the rename (smith-<id>, i<id>) keep working.
+worker_agent() { local a; a=$(task_field "$1" agent); echo "${a:-$(new_agent_name "$1" "$(task_field "$1" type)")}"; }
 
 # Column of agents.tsv for a kind: agent_info <kind> <integration|resume|transcript>. Prints "-" if unknown.
 agent_info() {
