@@ -21,7 +21,8 @@ polls() { awk -v w="$1" -v i="$interval" 'BEGIN { n = int(w / i + 0.5); print (n
 # Baseline for watch.sh: a gate the worker marks before its watcher starts still counts as new.
 log=$(gate_log "$id")
 lines=$(if [ -f "$log" ]; then wc -l <"$log" | tr -d ' '; else echo 0; fi)
-run_update '.tasks[$id].gate_lines = ($n | tonumber)' --arg id "$id" --arg n "$lines"
+# New work for this worker, so the run isn't done yet: offer cleanup again when it is.
+run_update '.tasks[$id].gate_lines = ($n | tonumber) | del(.cleanup_offered)' --arg id "$id" --arg n "$lines"
 # needs_you is cleared only once the message went out (exit 0 or 2), so a failed send leaves it set.
 clear_needs_you() { run_update '.tasks[$id].needs_you = false' --arg id "$id"; }
 

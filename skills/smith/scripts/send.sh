@@ -15,7 +15,8 @@ agent=$(worker_agent "$id"); kind=$(task_field "$id" kind); pane=$(task_field "$
 # Baseline for watch.sh: a gate the worker marks before its watcher starts still counts as new.
 log=$(gate_log "$id")
 lines=$(if [ -f "$log" ]; then wc -l <"$log" | tr -d ' '; else echo 0; fi)
-run_update '.tasks[$id].gate_lines = ($n | tonumber)' --arg id "$id" --arg n "$lines"
+# New work for this worker, so the run isn't done yet: offer cleanup again when it is.
+run_update '.tasks[$id].gate_lines = ($n | tonumber) | del(.cleanup_offered)' --arg id "$id" --arg n "$lines"
 
 if [ "$kind" = custom ]; then
 	herdr pane send-text "$pane" "$msg" >/dev/null && sleep 0.5 && herdr pane send-keys "$pane" enter >/dev/null \

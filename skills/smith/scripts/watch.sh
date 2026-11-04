@@ -26,6 +26,10 @@ while [ $# -gt 0 ]; do
 done
 grace_ms=$((grace_min * 60000))
 agent=$(worker_agent "$id"); name=$agent; log=$(gate_log "$id")
+# close.sh stops this watcher by its pid file. Remove the file on exit unless a newer watcher took it over.
+pidf=$(watch_pid_file "$id")
+echo $$ >"$pidf"
+trap '[ "$(cat "$pidf" 2>/dev/null)" = $$ ] && rm -f "$pidf"' EXIT
 kind=$(task_field "$id" kind); pane=$(task_field "$id" pane)
 
 count_lines() { if [ -f "$log" ]; then wc -l <"$log" | tr -d ' '; else echo 0; fi; }
@@ -46,6 +50,8 @@ deliver() {
 
 report() {
 	local what=$1 line state
+	# A task closed while this watcher ran was closed on purpose: nothing to report.
+	[ "$(task_field "$id" closed)" = true ] && exit 0
 	line=$(tail -1 "$log" 2>/dev/null || echo 'no gate line yet')
 	if [ "$kind" = custom ]; then state=$(pane_alive "$pane" && echo alive || echo gone); else state=$(agent_state "$agent"); fi
 	local sound=request; [ "$what" = GATE ] && [[ $line == "GATE pr |"* ]] && sound=done

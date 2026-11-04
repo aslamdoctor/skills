@@ -88,8 +88,9 @@ Workers stop at each gate and ask in plain text. The kickoff tells them this. If
 
 ## Wrap up
 
-- Close only the tabs this run created (from `run.json`), and only when the user agrees: `herdr tab close <tab>`. Keep the worktrees and `run.json` until the PRs merge, since review fixes resume from them.
-- Stop any detached watchers you started for closed tasks (`pkill -f "watch.sh <id>"`).
+- Ask the user first (SKILL.md § 5 asks once when every worker is done). Then run `RUN=<run> S/close.sh --all`, or `S/close.sh <id>...` for some tasks.
+- close.sh stops each task's watcher by the pid in `<run>/watch-<id>.pid` (watch.sh writes it in both modes), closes the task's tab if it still exists and marks the task closed. A watcher of a closed task exits without reporting. It only touches tabs recorded in `run.json`, and it keeps worktrees, branches and `run.json`.
+- Exit codes: 0 all went well, 1 a tab close failed (a warning is on stderr and the other tasks still run), 2 usage error or unknown task id (nothing touched).
 - When everything has merged, offer to remove the worktrees (`git worktree remove <path>`), delete the local branches and archive the run directory.
 - Never focus or close tabs you didn't create. Never stop the Herdr server.
 

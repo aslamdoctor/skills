@@ -2,6 +2,7 @@
 # herdr-app wrap-up. Usage: RUN=<run dir> close.sh <id>...   or   RUN=<run dir> close.sh --all
 # Per task: hc kill + hc rm its terminal, close its tab if it still exists, set .closed = true.
 # With --all every task in run.json is closed. Worktrees, branches and run.json are kept.
+# When no open task is left, the detached watcher recorded in <run>/watch.pid is stopped too.
 # Never calls `hc server`, `herdr-app quit`, or closes any id that is not in run.json.
 # An already-removed terminal (exit 3 with "not_found") is fine. A task is marked closed only when all its steps succeeded. Exit 0 when all went well, 1 when anything else
 # failed (a warning goes to stderr and the remaining tasks are still processed), 2 on a usage error.
@@ -75,4 +76,8 @@ for id in ${ids[@]+"${ids[@]}"}; do
 	close_if_present tab.close "$tab" "task $id"
 	[ "$tfail" -eq 0 ] && run_update '.tasks[$id].closed = true | .tasks[$id].needs_you = false' --arg id "$id"
 done
+# Once no task is open, stop the run's detached --notify watcher (by its recorded pid only).
+if [ "$(jq '[.tasks[] | select(.closed != true)] | length' "$RUN/run.json")" -eq 0 ]; then
+	stop_watcher "$RUN/watch.pid"
+fi
 exit "$rc"

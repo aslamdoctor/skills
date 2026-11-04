@@ -85,6 +85,33 @@ hc_turn() {
 	echo "${v:-0}"
 }
 
+# Live state of a task's worker on either backend. Never fails; "gone" when it can't be found.
+task_state() {
+	if [ "$(run_backend)" = herdr-app ]; then hc_state "$(worker_hc "$1")"; return; fi
+	if [ "$(task_field "$1" kind)" = custom ]; then
+		if pane_alive "$(task_field "$1" pane)"; then echo alive; else echo gone; fi
+	else
+		agent_state "$(worker_agent "$1")"
+	fi
+}
+
+# The last gate of a task type: code tasks end at pr, review tasks at posted.
+final_gate() { if [ "${1:-code}" = review ]; then echo posted; else echo pr; fi; }
+
+# Pid file of the detached watcher for one task (Herdr TUI).
+watch_pid_file() { echo "$RUN/watch-$(file_key "$1").pid"; }
+
+# Stop a watcher by its pid file, only if that pid is still a watch.sh process. Never fails.
+stop_watcher() {
+	local f=$1 pid
+	[ -f "$f" ] || return 0
+	pid=$(cat "$f" 2>/dev/null) || true
+	if [ -n "$pid" ] && ps -o command= -p "$pid" 2>/dev/null | rg -q 'watch\.sh'; then
+		kill "$pid" 2>/dev/null || true
+	fi
+	rm -f "$f"
+}
+
 now() { date '+%Y-%m-%dT%H:%M:%S%z'; }
 
 # Plain `hc send` waits for a person to pause and has no timeout of its own, so bound it.

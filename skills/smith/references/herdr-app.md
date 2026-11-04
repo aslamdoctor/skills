@@ -85,10 +85,9 @@ Workers stop at each gate and ask in plain text. The kickoff tells them this.
 
 ## Wrap up
 
-- Ask the user first. Then run `RUN=<run> S/app/close.sh <id>...`, or `--all` for every task in the run.
-- close.sh kills and removes each task's terminal, closes its tab and marks the task closed. It only touches ids recorded in `run.json`, and it keeps worktrees, branches and `run.json`.
+- Ask the user first (SKILL.md § 5 asks once when every worker is done). Then run `RUN=<run> S/app/close.sh --all`, or `S/app/close.sh <id>...` for some tasks.
+- close.sh kills and removes each task's terminal, closes its tab and marks the task closed. Once no task is open, it also stops the detached watcher by the pid in `<run>/watch.pid` (only if that pid is still a watch.sh). A background-task watcher exits by itself with "no live workers". It only touches ids recorded in `run.json`, and it keeps worktrees, branches and `run.json`.
 - Exit codes: 0 all went well, 1 something other than "already gone" failed (a warning is on stderr and the other tasks still run), 2 usage error or unknown task id (nothing touched).
-- Stop the detached watcher this run started, by its recorded pid only: `kill "$(cat <run>/watch.pid)"`, then `rm <run>/watch.pid`. Skip it if the file is missing or the process has already exited. A background-task watcher needs no kill.
 - When everything has merged, offer to remove the worktrees (`git worktree remove <path>`), delete the local branches and archive the run directory.
 - Never touch spaces, tabs or terminals the run didn't create. Never stop the app or the core.
 

@@ -80,7 +80,7 @@ fi
 herdr pane report-metadata "$pane" --source smith --title "$label" \
 	--state-label "working=$label working" --token "gate=started" >/dev/null 2>&1 || true
 
-run_update '.tasks[$id] = ((.tasks[$id] // {}) + {id:$id, type:$type, agent:$agent, kind:$kind, cmd:$cmd, branch:$branch, base:$base, worktree:$wt, tab:$tab, pane:$pane, session:$session, updated:$now}) | .tasks[$id].gate //= "started"' \
+run_update '.tasks[$id] = ((.tasks[$id] // {}) + {id:$id, type:$type, agent:$agent, kind:$kind, cmd:$cmd, branch:$branch, base:$base, worktree:$wt, tab:$tab, pane:$pane, session:$session, updated:$now}) | del(.tasks[$id].closed) | del(.cleanup_offered) | .tasks[$id].gate //= "started"' \
 	--arg id "$id" --arg type "$type" --arg agent "$agent" --arg kind "$kind" --arg cmd "$cmd" --arg branch "$branch" --arg base "$base" \
 	--arg wt "$wt" --arg tab "$tab" --arg pane "$pane" --arg session "$session" --arg now "$(now)"
 

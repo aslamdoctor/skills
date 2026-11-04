@@ -91,6 +91,7 @@ After every prompt that starts work, arm the watcher: `references/<backend>.md` 
    - **STOPPED / GONE:** what the screen shows, and whether to nudge, resume or drop the task.
 3. Ask for decisions, batching pending decisions across workers. Then relay them: `references/<backend>.md` § Relay answers.
 4. Before you say "shipped", check the PR yourself: base, reviewers, labels, resolved threads and file list.
+5. After handling each report, run `RUN=<run> S/done.sh --ask`. When it exits 0, every open worker has reached its last gate (`pr` for code tasks, `posted` for review tasks) or is gone. End your report with one question: "All N workers are done. Close their tabs and watchers?" A yes runs § 7. A no closes nothing, and you don't ask again: `done.sh --ask` exits 3 until new work starts (a spawn or a send). Exit 1 means some workers are still busy; say nothing about cleanup.
 
 Keep a status table in every report: `references/<backend>.md` § Board.
 
@@ -102,7 +103,9 @@ Ship stacked tasks as stacked PRs (see **Stacked ship** in the templates). After
 
 ## 7. Wrap up
 
-`references/<backend>.md` § Wrap up. Keep the worktrees and `run.json` until the PRs merge, since review fixes resume from them. Clean up only what this run created, and only when the user agrees. When everything has merged, offer to remove the worktrees, delete the local branches and archive the run directory.
+On a yes to the § 5 question, or whenever the user says "close everything", run one command: `RUN=<run> S/close.sh --all` on herdr, `RUN=<run> S/app/close.sh --all` on herdr-app (details in `references/<backend>.md` § Wrap up). It closes the worker tabs and stops their watchers, and nothing else. Report what it closed and any warnings.
+
+It keeps the worktrees, branches and `run.json`, since review fixes resume from them, and it never touches your own tab. Clean up only what this run created, and only when the user agrees. When everything has merged, offer separately to remove the worktrees, delete the local branches and archive the run directory.
 
 ## 8. Resume a run
 
