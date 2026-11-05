@@ -88,11 +88,12 @@ Workers stop at each gate and ask in plain text. The kickoff tells them this. If
 
 ## Wrap up
 
-- Ask the user first (SKILL.md § 5 asks once when every worker is done). Then run `RUN=<run> S/close.sh --all`, or `S/close.sh <id>...` for some tasks.
+- Ask the user first (SKILL.md § 5 asks once when every worker is done). Then run `RUN=<run> S/close.sh --all --self`, or `S/close.sh --all` to keep the orchestrator tab, or `S/close.sh <id>...` for some tasks.
+- `--self` closes your own tab (`$HERDR_TAB_ID`) after the workers. It starts `close-self.sh` detached, which waits until your agent in `$HERDR_PANE_ID` stops working (at most 10 minutes), then closes the tab. It skips this when a worker tab didn't close. What it did goes to `<run>/close-self.log`.
 - close.sh stops each task's watcher by the pid in `<run>/watch-<id>.pid` (watch.sh writes it in both modes), closes the task's tab if it still exists and marks the task closed. A watcher of a closed task exits without reporting. It only touches tabs recorded in `run.json`, and it keeps worktrees, branches and `run.json`.
 - Exit codes: 0 all went well, 1 a tab close failed (a warning is on stderr and the other tasks still run), 2 usage error or unknown task id (nothing touched).
 - When everything has merged, offer to remove the worktrees (`git worktree remove <path>`), delete the local branches and archive the run directory.
-- Never focus or close tabs you didn't create. Never stop the Herdr server.
+- Never focus or close tabs you didn't create, apart from your own tab on a `--self` the user agreed to. Never stop the Herdr server.
 
 ## Resume
 

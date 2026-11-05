@@ -9,8 +9,10 @@ set -uo pipefail
 . "$(dirname "$0")/lib.sh"
 
 rc=0
+self=0
 ids=()
 if [ "${1:-}" = "--all" ]; then
+	[ "${2:-}" = "--self" ] && self=1
 	while IFS= read -r id; do ids+=("$id"); done < <(jq -r '.tasks[] | select(.closed != true) | .id' "$RUN/run.json")
 else
 	ids=("$@")
@@ -44,4 +46,16 @@ for id in ${ids[@]+"${ids[@]}"}; do
 	n=$((n + 1))
 done
 echo "closed $n of ${#ids[@]} workers"
+# The orchestrator's own tab goes last, and only when every worker closed cleanly.
+if [ "$self" -eq 1 ]; then
+	if [ "$rc" -ne 0 ]; then
+		echo "close.sh: a worker didn't close cleanly, so the orchestrator tab stays open" >&2
+	elif [ -z "${HERDR_PANE_ID:-}" ] || [ -z "${HERDR_TAB_ID:-}" ]; then
+		echo "close.sh: HERDR_PANE_ID or HERDR_TAB_ID isn't set, so the orchestrator tab stays open" >&2
+		rc=1
+	else
+		nohup env RUN="$RUN" "$(dirname "$0")/close-self.sh" "$HERDR_PANE_ID" "$HERDR_TAB_ID" >/dev/null 2>&1 &
+		echo "the orchestrator tab closes when this turn ends"
+	fi
+fi
 exit "$rc"

@@ -16,9 +16,11 @@ warn() { echo "close.sh: $*" >&2; rc=1; tfail=1; }
 rc=0; tfail=0
 
 all=0
+self=0
 ids=()
 if [ "${1:-}" = "--all" ]; then
 	all=1
+	[ "${2:-}" = "--self" ] && self=1
 	while IFS= read -r id; do ids+=("$id"); done < <(jq -r '.tasks | keys[]' "$RUN/run.json")
 else
 	ids=("$@")
@@ -79,5 +81,19 @@ done
 # Once no task is open, stop the run's detached --notify watcher (by its recorded pid only).
 if [ "$(jq '[.tasks[] | select(.closed != true)] | length' "$RUN/run.json")" -eq 0 ]; then
 	stop_watcher "$RUN/watch.pid"
+fi
+# The orchestrator's own tab goes last, and only when every worker closed cleanly and this is that orchestrator.
+if [ "$self" -eq 1 ]; then
+	orch=$(jq -r '.orchestrator.address // empty' "$RUN/run.json"); orch_tab=$(jq -r '.orchestrator.tab // empty' "$RUN/run.json")
+	if [ "$rc" -ne 0 ]; then
+		echo "close.sh: a worker didn't close cleanly, so the orchestrator tab stays open" >&2
+	elif [ -z "$orch" ] || [ -z "$orch_tab" ]; then
+		warn "no orchestrator address or tab in run.json, the orchestrator tab stays open"
+	elif [ "${HC_TERMINAL_ID:-}" != "$orch" ]; then
+		warn "this isn't the run's orchestrator ($orch), so its tab stays open"
+	else
+		nohup env RUN="$RUN" "$here/../close-self.sh" "$orch" "$orch_tab" >/dev/null 2>&1 &
+		echo "the orchestrator tab ($(orch_label "$orch")) closes when this turn ends"
+	fi
 fi
 exit "$rc"

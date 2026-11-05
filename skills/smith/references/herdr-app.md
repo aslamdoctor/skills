@@ -85,11 +85,12 @@ Workers stop at each gate and ask in plain text. The kickoff tells them this.
 
 ## Wrap up
 
-- Ask the user first (SKILL.md § 5 asks once when every worker is done). Then run `RUN=<run> S/app/close.sh --all`, or `S/app/close.sh <id>...` for some tasks.
+- Ask the user first (SKILL.md § 5 asks once when every worker is done). Then run `RUN=<run> S/app/close.sh --all --self`, or `S/app/close.sh --all` to keep the orchestrator tab, or `S/app/close.sh <id>...` for some tasks.
+- `--self` closes the orchestrator's own tab (`orchestrator.tab` in `run.json`) after the workers. It starts `close-self.sh` detached, which waits until the orchestrator stops working (at most 10 minutes), then kills and removes its terminal and closes the tab, and sets `orchestrator.closed`. It skips this when a worker didn't close cleanly, or when `HC_TERMINAL_ID` isn't the recorded orchestrator. What it did goes to `<run>/close-self.log`.
 - close.sh kills and removes each task's terminal, closes its tab and marks the task closed. Once no task is open, it also stops the detached watcher by the pid in `<run>/watch.pid` (only if that pid is still a watch.sh). A background-task watcher exits by itself with "no live workers". It only touches ids recorded in `run.json`, and it keeps worktrees, branches and `run.json`.
 - Exit codes: 0 all went well, 1 something other than "already gone" failed (a warning is on stderr and the other tasks still run), 2 usage error or unknown task id (nothing touched).
 - When everything has merged, offer to remove the worktrees (`git worktree remove <path>`), delete the local branches and archive the run directory.
-- Never touch spaces, tabs or terminals the run didn't create. Never stop the app or the core.
+- Never touch spaces, tabs or terminals the run didn't create, apart from the orchestrator's own tab on a `--self` the user agreed to. Never stop the app or the core.
 
 ## Resume
 

@@ -13,7 +13,7 @@ You tell your agent which issues to work on. It becomes the orchestrator: each t
 - Each task runs on its own branch in `~/<repo>-wt/<branch>`, so workers never touch each other's files or your main checkout.
 - Workers write a spec and stop. After you approve it, they implement, commit and stop again. They ship only when you say so.
 - A watcher per worker wakes the orchestrator when a gate is reached, a dialog is waiting, or a worker stops. A Herdr toast and sound tell you when you're needed.
-- When every worker reaches its last gate, the orchestrator asks once whether to close their tabs and watchers. One yes closes them all. Worktrees and branches stay for review fixes.
+- When every worker reaches its last gate, the orchestrator asks once whether to close their tabs, their watchers and its own tab. One yes closes them all, the orchestrator tab last, once its reply is done. Worktrees and branches stay for review fixes.
 - Workers are Smith's copies, named after their task type and task: `code-<id>` for an issue and `review-<id>` for a PR review. Each worker pane shows its name and gate (`code-102 · spec`) in the Herdr sidebar. The orchestrator's tab is `SMITH-ORC<n>`, after its terminal address (e.g. `SMITH-ORC7` for `t7`).
 - Workers can be Claude Code, Codex, Antigravity, Grok, OpenCode, Pi, Copilot, Cursor or any other agent Herdr supports. Other CLI agents work through a custom-command mode, and one run can mix agent kinds.
 - A run is saved to `~/.smith/runs/`. Workers can be restarted later in their original conversation, for example to handle review comments the next day.
@@ -100,7 +100,8 @@ scripts/mark.sh          workers call this at each gate (gate log, run.json, sid
 scripts/watch.sh         wait until a worker needs the orchestrator, then report or wake it
 scripts/board.sh         status table for the whole run (both backends)
 scripts/done.sh          is every worker at its last gate? the orchestrator then offers cleanup once
-scripts/close.sh         close worker tabs and stop their watchers (keeps worktrees and run.json)
+scripts/close.sh         close worker tabs and stop their watchers (keeps worktrees and run.json); --self closes the orchestrator tab too
+scripts/close-self.sh    close the orchestrator tab once its turn ends (started by close.sh --self)
 scripts/agents.tsv       per-agent integration, resume arguments and transcript paths
 scripts/app/             Herdr app versions: preflight, spawn, send, watch, close, launch.tsv
 ```

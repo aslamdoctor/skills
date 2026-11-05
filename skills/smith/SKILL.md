@@ -91,7 +91,7 @@ After every prompt that starts work, arm the watcher: `references/<backend>.md` 
    - **STOPPED / GONE:** what the screen shows, and whether to nudge, resume or drop the task.
 3. Ask for decisions, batching pending decisions across workers. Then relay them: `references/<backend>.md` § Relay answers.
 4. Before you say "shipped", check the PR yourself: base, reviewers, labels, resolved threads and file list.
-5. After handling each report, run `RUN=<run> S/done.sh --ask`. When it exits 0, every open worker has reached its last gate (`pr` for code tasks, `posted` for review tasks) or is gone. End your report with one question: "All N workers are done. Close their tabs and watchers?" A yes runs § 7. A no closes nothing, and you don't ask again: `done.sh --ask` exits 3 until new work starts (a spawn or a send). Exit 1 means some workers are still busy; say nothing about cleanup.
+5. After handling each report, run `RUN=<run> S/done.sh --ask`. When it exits 0, every open worker has reached its last gate (`pr` for code tasks, `posted` for review tasks) or is gone. End your report with one question: "All N workers are done. Close their tabs, their watchers and this orchestrator tab?" A yes runs § 7. A no closes nothing, and you don't ask again: `done.sh --ask` exits 3 until new work starts (a spawn or a send). Exit 1 means some workers are still busy; say nothing about cleanup.
 
 Keep a status table in every report: `references/<backend>.md` § Board.
 
@@ -103,9 +103,11 @@ Ship stacked tasks as stacked PRs (see **Stacked ship** in the templates). After
 
 ## 7. Wrap up
 
-On a yes to the § 5 question, or whenever the user says "close everything", run one command: `RUN=<run> S/close.sh --all` on herdr, `RUN=<run> S/app/close.sh --all` on herdr-app (details in `references/<backend>.md` § Wrap up). It closes the worker tabs and stops their watchers, and nothing else. Report what it closed and any warnings.
+On a yes to the § 5 question, or whenever the user says "close everything", run one command: `RUN=<run> S/close.sh --all --self` on herdr, `RUN=<run> S/app/close.sh --all --self` on herdr-app (details in `references/<backend>.md` § Wrap up). It closes the worker tabs and stops their watchers. Then, once your current turn ends, it closes your own orchestrator tab too. Report what it closed and any warnings in that same turn, and make it your last message: the tab goes right after. If a worker didn't close cleanly, the orchestrator tab stays open so you can sort it out.
 
-It keeps the worktrees, branches and `run.json`, since review fixes resume from them, and it never touches your own tab. Clean up only what this run created, and only when the user agrees. When everything has merged, offer separately to remove the worktrees, delete the local branches and archive the run directory.
+Leave out `--self` when the user wants only the workers closed ("close the workers but keep this tab"), or when closing some tasks by id.
+
+It keeps the worktrees, branches and `run.json`, since review fixes resume from them. The orchestrator's conversation can be picked up again with the agent's own resume (`claude --resume`). Clean up only what this run created, and only when the user agrees. When everything has merged, offer separately to remove the worktrees, delete the local branches and archive the run directory.
 
 ## 8. Resume a run
 
