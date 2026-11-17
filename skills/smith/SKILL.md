@@ -20,7 +20,7 @@ Prompt templates are in `references/prompts.md`. Backend-specific steps are in `
 | Both | Ask the user once which one to use |
 | Neither | Say "smith needs a Herdr TUI pane or the Herdr app", and stop |
 
-Read `references/<backend>.md` now and use its sections wherever this file says § <name>. Read `references/gotchas.md` (the Common section plus your backend's section) before the first run in a session.
+Read `references/<backend>.md` now and use its sections wherever this file says § <name>. Read `references/gotchas.md` (the Common section plus your backend's section) before the first run in a session. Read each reference file with your file-read tool, or one `cat` per file, never several joined by `echo` separators: zsh expands a word that starts with `=` (`echo ======`), fails, and the rest of the command never runs.
 
 ## Agent support
 
