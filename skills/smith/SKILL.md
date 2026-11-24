@@ -57,7 +57,7 @@ Show the type per ID in the setup table. A run can mix both types. If a code-tas
 | Review skill (review tasks) | A PR review skill for the project (e.g. thrive-review-pr), else a plain `gh pr diff` review with findings only |
 | Test and lint commands | Instruction files, package.json / composer.json / Makefile |
 | Worker kind per task | Your own kind |
-| Worktree root | `~/<repo>-wt/<branch>` (override with `WT_ROOT`) |
+| Worktree root | `~/<repo>-wt/<branch>` (override with `WT_ROOT`). Preflight and the first spawn save it as `wt_root` in `run.json`, with the main checkout as `repo_root`; later spawns and resumes use those, whatever directory you run them from |
 | Gates | Default `spec / implemented / pr` |
 
 Show the detected setup as one table and confirm it with the user before spawning anything. Use your structured question tool if you have one, otherwise ask in plain text.

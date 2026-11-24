@@ -5,6 +5,7 @@
 | Symptom | Cause | Fix |
 |---|---|---|
 | Random test failures ("Could not insert post", deadlocks) | Worktrees share one test database | Give each worktree its own DB name if the test config allows it; otherwise rerun before debugging |
+| Resume fails with `fatal: invalid reference: <base>`, or a stray `~/<other-repo>-wt` folder appears | Older spawn scripts took the repo and worktree root from the current directory, so a resume run from another repo tried to cut a new worktree there | Fixed: spawn reuses the recorded `worktree`, reads `repo_root` / `wt_root` from `run.json`, and refuses a repo that doesn't match the run dir name. On an old run, `cd` into the repo and pass the old `WT_ROOT` once; it gets recorded |
 | Local site or app shows old code | The dev site (symlinks, docker mounts) points at the main checkout, not the worktree | Answer No to automated local QA from workers, or swap the mount for one worktree at a time |
 | Untracked `vendor`, `node_modules` or env files in the worktree | Borrowed from the main checkout as symlinks; `/vendor/` ignore rules don't match symlinks | Tell workers to keep them out of `git add`, and check the PR's file list before reporting it shipped |
 | Merge conflicts between parallel PRs | Several workers add to the same docs section, registry or numbered list | Assign ownership of shared entries in the kickoff; renumber or rebase before shipping the second PR |

@@ -4,7 +4,7 @@
 #   branch and base-ref '-': a review task. No worktree; the worker runs in the repo root.
 #   The prompt comes from stdin (may be empty with --resume) and becomes one argv word.
 #   kind default: $AGENT_KIND or claude. Launch templates live in launch.tsv.
-# Env: WT_ROOT (default $HOME/<repo>-wt), SPAWN_WAIT (default 60 s), SPAWN_INTERVAL (default 2 s), LAUNCH_TSV (test override).
+# Env: WT_ROOT (default: run.json wt_root, else $HOME/<repo>-wt), SPAWN_WAIT (default 60 s), SPAWN_INTERVAL (default 2 s), LAUNCH_TSV (test override).
 # Records the task in run.json and prints it, plus status, as one JSON line.
 set -euo pipefail
 here=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
@@ -43,22 +43,9 @@ for target in "$recorded" "$agent"; do
 	fi
 done
 
-# 2. Worktree (same rules as scripts/spawn.sh).
-repo_root=$(git rev-parse --show-toplevel)
-root=${WT_ROOT:-"$HOME/$(basename "$repo_root")-wt"}
-wt="$root/$branch"
-[ "$type" = review ] && wt=$repo_root
-mkdir -p "$root"
-if [ ! -d "$wt" ]; then
-	git -C "$repo_root" fetch -q origin
-	if git -C "$repo_root" show-ref -q --verify "refs/heads/$branch"; then
-		git -C "$repo_root" worktree add -q "$wt" "$branch"
-	else
-		git -C "$repo_root" worktree add -q -b "$branch" "$wt" "$base"
-		# Don't track the base ref, so a bare `git push` can't hit it.
-		git -C "$wt" branch --unset-upstream 2>/dev/null || true
-	fi
-fi
+# 2. Worktree (lib.sh resolve_worktree: a resume reuses the recorded one from any directory).
+resolve_worktree "$id" "$type" "$branch" || exit 1
+if [ "$type" = code ]; then ensure_worktree "$branch" "$base"; fi
 
 # 3-4. Launch template and session.
 row=$(awk -F'\t' -v k="$kind" '$1 == k { print; exit }' "${LAUNCH_TSV:-$here/launch.tsv}")

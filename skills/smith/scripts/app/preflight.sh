@@ -15,7 +15,16 @@ resume=0
 
 [ -n "${HC_TERMINAL_ID:-}" ] || fail "HC_TERMINAL_ID is not set, run smith inside the Herdr app"
 hc server status >/dev/null 2>&1 || fail "hc server status failed, is the Herdr app running?"
-git rev-parse --show-toplevel >/dev/null 2>&1 || fail "not inside a git repository"
+# The run's repo: recorded in run.json (a resume works from any directory), else the current directory,
+# which must match the run dir name (<repo>-<date>). spawn.sh reads repo_root and wt_root from run.json.
+repo_root=$(jq -r '.repo_root // empty' "$RUN/run.json")
+if [ -z "$repo_root" ] || [ ! -d "$repo_root" ]; then
+	repo_root=$(main_checkout)
+	[ -n "$repo_root" ] || fail "not inside a git repository"
+	err=$(check_run_repo "$repo_root") || { echo "$err"; exit 1; }
+	run_update '.repo_root = $r' --arg r "$repo_root"
+fi
+if [ -n "${WT_ROOT:-}" ]; then run_update '.wt_root = $w' --arg w "$WT_ROOT"; fi
 
 # Orchestrator, from its own hc record.
 rec=$(hc get "$HC_TERMINAL_ID" --json 2>/dev/null) || fail "hc get $HC_TERMINAL_ID failed"

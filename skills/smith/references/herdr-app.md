@@ -32,7 +32,7 @@ EOF
 ```
 
 The kickoff is the **Kickoff** prompt from `references/prompts.md` (with the gate instruction). It becomes the agent's own first prompt, so nothing is sent afterwards. spawn.sh:
-- creates or reuses the worktree
+- creates or reuses the worktree. A task with a recorded `worktree` that still exists on its branch reuses it, and `repo_root` / `wt_root` come from `run.json`, so a resume works from any directory. A fresh run must start inside the repo; a repo whose name doesn't match the run dir (`<repo>-<date>`) is refused before anything is created
 - starts the worker with `hc run`, the name `code-<id>` (`review-<id>` when branch and base are `-`), `--outlive-parent` and the label `smith.run=<basename of RUN>`
 - names the tab the same and records its id as `.tab` (the `herdr.tab` label value becomes the tab id, and scripts use the recorded one)
 - retries the terminal lookup, because a terminal can be missing from `herdr-app ls` right after `hc run`

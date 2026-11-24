@@ -93,3 +93,31 @@ pre() { "$S/app/preflight.sh" "$@"; }
 	[ "$(jq -r .orchestrator.kind "$RUN/run.json")" = claude-code ]
 	[ "$(jq -r .orchestrator.tab "$RUN/run.json")" = tb1 ]
 }
+
+@test "records_repo_root" {
+	run pre
+	[ "$status" -eq 0 ]
+	[ "$(jq -r .repo_root "$RUN/run.json")" = "$(cd "$REPO" && pwd -P)" ]
+}
+
+@test "records_wt_root_from_env" {
+	WT_ROOT=/x/wt run pre
+	[ "$status" -eq 0 ]
+	[ "$(jq -r .wt_root "$RUN/run.json")" = /x/wt ]
+}
+
+@test "resume_works_outside_the_repo_when_repo_root_is_recorded" {
+	write_run "$(jq -nc --arg r "$REPO" '{repo_root:$r, tasks:{}}')"
+	cd "$BATS_TEST_TMPDIR"
+	run pre --resume
+	[ "$status" -eq 0 ]
+	[ "$(jq -r .repo_root "$RUN/run.json")" = "$REPO" ]
+}
+
+@test "fails_when_repo_does_not_match_run_name" {
+	RUN=$BATS_TEST_TMPDIR/elsewhere-2026-11-24-app
+	mkdir -p "$RUN"
+	run pre
+	[ "$status" -eq 1 ]
+	echo "$output" | jq -e '.error | test("is not for repo")' >/dev/null
+}

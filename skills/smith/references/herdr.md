@@ -35,7 +35,7 @@ RUN=<run> S/spawn.sh <id> <branch> <base-ref> --cmd "<launch command>"   # tier 
 ```
 
 spawn.sh:
-- creates or reuses the worktree
+- creates or reuses the worktree. A task with a recorded `worktree` that still exists on its branch reuses it, and `repo_root` / `wt_root` come from `run.json`, so a resume works from any directory. A repo whose name doesn't match the run dir (`<repo>-<date>`) is refused before anything is created
 - opens a background tab and starts the worker `code-<id>` (`review-<id>` when branch and base are `-`)
 - records the task in `run.json` (kind, pane, tab, session ID if one is reported)
 - labels the tab and pane with the same name in the sidebar

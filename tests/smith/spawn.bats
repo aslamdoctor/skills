@@ -284,3 +284,50 @@ hc_run_line() { stub_calls hc | rg '^run ' | head -1; }
 	stub_calls herdr-app | rg -q 'do tab.rename --id tb7 --name review-5737'
 	[ "$(jq -r '.tasks["5737"].agent' "$RUN/run.json")" = review-5737 ]
 }
+
+@test "records_repo_root_and_wt_root" {
+	run sp 101 b101 origin/main <<<"x"
+	[ "$status" -eq 0 ]
+	jq -e --arg r "$(cd "$REPO" && pwd -P)" --arg w "$WT_ROOT" '.repo_root == $r and .wt_root == $w' "$RUN/run.json" >/dev/null
+}
+
+@test "resume_reuses_recorded_worktree_from_another_repo" {
+	# Old run.json shape (no repo_root, wt_root): a worktree outside the default root, a gone worker,
+	# a base ref that doesn't exist, and the orchestrator in another repo without WT_ROOT.
+	wt=$BATS_TEST_TMPDIR/custom-wt/b101
+	git -C "$REPO" worktree add -q -b b101 "$wt" main
+	write_run "$(jq -nc --arg w "$wt" '{backend:"herdr-app",orchestrator:{address:"t9",kind:"claude-code",space:"sp1",tab:"tb1"},tasks:{"101":{id:"101",hc:"t5",branch:"b101",worktree:$w,gate:"pr",closed:true}}}')"
+	stub_reply hc get.t5 '{"state":"finished"}'
+	unset WT_ROOT
+	git init -q -b main "$BATS_TEST_TMPDIR/other"
+	cd "$BATS_TEST_TMPDIR/other"
+	run sp 101 b101 origin/feature --resume abc-123 <<<"go on"
+	[ "$status" -eq 0 ]
+	echo "$output" | tail -1 | jq -e --arg w "$wt" '.worktree == $w' >/dev/null
+	hc_run_line | rg -q -- "--cwd $wt"
+	[ ! -d "$HOME/other-wt" ]
+	jq -e --arg r "$(cd "$REPO" && pwd -P)" --arg w "$BATS_TEST_TMPDIR/custom-wt" '.repo_root == $r and .wt_root == $w' "$RUN/run.json" >/dev/null
+}
+
+@test "later_spawn_uses_recorded_wt_root" {
+	run sp 101 b101 origin/main <<<"x"
+	[ "$status" -eq 0 ]
+	root=$WT_ROOT; unset WT_ROOT
+	stub_reply hc get.t21 '{"state":"finished"}'
+	run sp 102 b102 origin/main <<<"x"
+	[ "$status" -eq 0 ]
+	[ -d "$root/b102" ]
+	[ ! -d "$HOME/repo-wt" ]
+}
+
+@test "refuses_repo_that_does_not_match_run_name" {
+	RUN=$BATS_TEST_TMPDIR/elsewhere-2026-11-24-app
+	mkdir -p "$RUN"
+	write_run '{"backend":"herdr-app","orchestrator":{"address":"t9","kind":"claude-code","space":"sp1","tab":"tb1"},"tasks":{}}'
+	unset WT_ROOT
+	run sp 101 b101 origin/main <<<"x"
+	[ "$status" -eq 1 ]
+	echo "$output" | jq -e '.error | test("is not for repo")' >/dev/null
+	[ ! -d "$HOME/repo-wt" ]
+	[ -z "$(stub_calls hc | rg '^run ' || true)" ]
+}

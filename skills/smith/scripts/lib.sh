@@ -114,6 +114,76 @@ stop_watcher() {
 
 now() { date '+%Y-%m-%dT%H:%M:%S%z'; }
 
+# Main checkout of the repo at <dir> (default: the current directory), also when <dir> is a worktree.
+# Prints nothing outside a git repository. Never fails.
+main_checkout() {
+	local d
+	d=$(git -C "${1:-.}" rev-parse --path-format=absolute --git-common-dir 2>/dev/null) || return 0
+	(cd "$(dirname "$d")" && pwd -P)
+}
+
+# Run dirs are named <repo>-<YYYY-MM-DD>[...]. Refuse a repo whose name doesn't match, so a script run
+# from the wrong directory can't create worktrees in another repo. Other run dir names aren't checked.
+check_run_repo() {
+	local name
+	name=$(basename "$RUN")
+	if [[ $name =~ ^(.+)-[0-9]{4}-[0-9]{2}-[0-9]{2} ]] && [ "${BASH_REMATCH[1]}" != "$(basename "$1")" ]; then
+		jq -nc --arg r "$1" --arg n "$name" '{error:"run \($n) is not for repo \($r); cd into that run'"'"'s repo or set repo_root in run.json"}'
+		return 1
+	fi
+}
+
+# Where a task's worker runs. Sets the globals repo_root, wt_root and wt, and records repo_root and
+# wt_root in run.json, so later spawns and resumes don't depend on the current directory.
+# Usage: resolve_worktree <id> <code|review> <branch>
+# repo_root: run.json, else the main checkout of the task's recorded worktree, else the current directory
+# (checked against the run dir name). wt_root: $WT_ROOT, else run.json, else the recorded worktree's
+# parent, else $HOME/<repo>-wt. wt: the recorded worktree when it still exists on <branch>.
+resolve_worktree() {
+	local id=$1 type=$2 branch=$3 recorded on
+	recorded=$(task_field "$id" worktree)
+	if [ "$type" = code ] && [ -n "$recorded" ] && [ -d "$recorded" ]; then
+		on=$(git -C "$recorded" branch --show-current 2>/dev/null) || on=""
+		[ "$on" = "$branch" ] || recorded=""
+	else
+		recorded=""
+	fi
+
+	repo_root=$(jq -r '.repo_root // empty' "$RUN/run.json")
+	if [ -n "$repo_root" ] && [ ! -d "$repo_root" ]; then repo_root=""; fi
+	if [ -z "$repo_root" ] && [ -n "$recorded" ]; then repo_root=$(main_checkout "$recorded"); fi
+	if [ -z "$repo_root" ]; then
+		repo_root=$(main_checkout)
+		[ -n "$repo_root" ] || { echo '{"error":"not inside a git repository and run.json has no repo_root"}'; return 1; }
+		check_run_repo "$repo_root" || return 1
+	fi
+
+	wt_root=${WT_ROOT:-$(jq -r '.wt_root // empty' "$RUN/run.json")}
+	if [ -z "$wt_root" ] && [ -n "$recorded" ] && [[ $recorded == */"$branch" ]]; then wt_root=${recorded%/"$branch"}; fi
+	[ -n "$wt_root" ] || wt_root="$HOME/$(basename "$repo_root")-wt"
+
+	if [ "$type" = review ]; then wt=$repo_root
+	elif [ -n "$recorded" ]; then wt=$recorded
+	else wt="$wt_root/$branch"; fi
+
+	run_update '.repo_root = $r | .wt_root = $w' --arg r "$repo_root" --arg w "$wt_root"
+}
+
+# Create the worktree for a code task unless it exists. Needs resolve_worktree first.
+ensure_worktree() {
+	local branch=$1 base=$2
+	[ -d "$wt" ] && return 0
+	mkdir -p "$wt_root"
+	git -C "$repo_root" fetch -q origin
+	if git -C "$repo_root" show-ref -q --verify "refs/heads/$branch"; then
+		git -C "$repo_root" worktree add -q "$wt" "$branch"
+	else
+		git -C "$repo_root" worktree add -q -b "$branch" "$wt" "$base"
+		# Don't track the base ref, so a bare `git push` can't hit it.
+		git -C "$wt" branch --unset-upstream 2>/dev/null || true
+	fi
+}
+
 # Plain `hc send` waits for a person to pause and has no timeout of its own, so bound it.
 # Usage: send_bounded <seconds> <hc send args...>. Never add --force: it would type into a blocked dialog.
 send_bounded() {

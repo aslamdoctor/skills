@@ -8,7 +8,8 @@
 #   --kind     any Herdr agent kind (see agents.tsv); default $AGENT_KIND or claude
 #   --resume   start the agent in its previous conversation (resume args come from agents.tsv)
 #   --cmd      tier D: an agent Herdr doesn't recognize. Launched with `pane run`; kind is recorded as custom
-# Env: WT_ROOT (default $HOME/<repo>-wt). Run inside the repo, in a Herdr pane.
+# Env: WT_ROOT (default: run.json wt_root, else $HOME/<repo>-wt). Run in a Herdr pane, inside the repo
+# for a new run; later spawns use run.json repo_root.
 # Records the task in run.json and prints it as one JSON line.
 set -euo pipefail
 . "$(dirname "$0")/lib.sh"
@@ -25,25 +26,13 @@ while [ $# -gt 0 ]; do
 done
 
 [ "${HERDR_ENV:-}" = 1 ] || { echo '{"error":"not inside a Herdr pane"}'; exit 1; }
-repo_root=$(git rev-parse --show-toplevel)
-root=${WT_ROOT:-"$HOME/$(basename "$repo_root")-wt"}
 type=code
 [ "$branch" = - ] && { type=review; branch=""; base=""; }
-wt="$root/$branch"
-[ "$type" = review ] && wt=$repo_root
 agent=$(new_agent_name "$id" "$type"); label=$agent
 
-mkdir -p "$root"
-if [ ! -d "$wt" ]; then
-	git -C "$repo_root" fetch -q origin
-	if git -C "$repo_root" show-ref -q --verify "refs/heads/$branch"; then
-		git -C "$repo_root" worktree add -q "$wt" "$branch"
-	else
-		git -C "$repo_root" worktree add -q -b "$branch" "$wt" "$base"
-		# Don't track the base ref, so a bare `git push` can't hit it.
-		git -C "$wt" branch --unset-upstream 2>/dev/null || true
-	fi
-fi
+# A resume reuses the recorded worktree from any directory (lib.sh resolve_worktree).
+resolve_worktree "$id" "$type" "$branch" || exit 1
+if [ "$type" = code ]; then ensure_worktree "$branch" "$base"; fi
 
 tab_json=$(herdr tab create --workspace "$HERDR_WORKSPACE_ID" --cwd "$wt" --label "$label" --no-focus)
 tab=$(jq -r '.result.tab.tab_id' <<<"$tab_json")
